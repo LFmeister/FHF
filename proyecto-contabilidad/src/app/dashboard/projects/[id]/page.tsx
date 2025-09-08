@@ -16,12 +16,6 @@ import { balancesService, type Balance } from '@/lib/balances'
 import { expensesService, type Expense } from '@/lib/expenses'
 import { auth } from '@/lib/auth'
 
-// Generate static params for static export
-export async function generateStaticParams() {
-  // Return empty array to generate no static routes
-  // This page will be rendered dynamically on the client
-  return []
-}
 
 export default function ProjectPage() {
   const params = useParams()

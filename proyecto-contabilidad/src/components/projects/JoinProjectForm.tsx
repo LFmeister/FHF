@@ -37,7 +37,7 @@ export function JoinProjectForm({ onSuccess }: JoinProjectFormProps) {
       const project = await projectsService.joinProject(data.inviteCode.toUpperCase())
       reset()
       onSuccess?.()
-      router.push(`/dashboard/projects/${project.id}`)
+      router.push(`/dashboard/project?id=${project.id}`)
     } catch (err: any) {
       setError(err.message || 'Error al unirse al proyecto')
     } finally {

@@ -40,7 +40,7 @@ export function CreateProjectForm({ onSuccess }: CreateProjectFormProps) {
       
       reset()
       onSuccess?.()
-      router.push(`/dashboard/projects/${project.id}`)
+      router.push(`/dashboard/project?id=${project.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear el proyecto')
     } finally {

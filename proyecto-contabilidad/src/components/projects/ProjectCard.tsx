@@ -53,7 +53,7 @@ export function ProjectCard({ project, currentUserId }: ProjectCardProps) {
                 Propietario
               </span>
             )}
-            <Link href={`/dashboard/projects/${project.id}/settings`}>
+            <Link href={`/dashboard/project?id=${project.id}&tab=settings`}>
               <Button variant="ghost" size="sm">
                 <Settings className="h-4 w-4" />
               </Button>
@@ -92,7 +92,7 @@ export function ProjectCard({ project, currentUserId }: ProjectCardProps) {
           </div>
 
           <div className="flex gap-2">
-            <Link href={`/dashboard/projects/${project.id}`} className="flex-1">
+            <Link href={`/dashboard/project?id=${project.id}`} className="flex-1">
               <Button className="w-full">
                 Ver Proyecto
               </Button>

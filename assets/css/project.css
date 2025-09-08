@@ -1,0 +1,513 @@
+/* Project Page Specific Styles */
+.project-header-section {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.project-header-section h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.project-description {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 16px;
+}
+
+.project-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.meta-item {
+    font-size: 14px;
+    color: #555;
+}
+
+.invite-code {
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.invite-code:hover {
+    background: #667eea;
+    color: white;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.completed {
+    background: #cce7ff;
+    color: #004085;
+}
+
+.status-badge.archived {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.project-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Expenses List */
+.expenses-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.expense-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.expense-item:hover {
+    background: #f8f9fa;
+}
+
+.expense-item:last-child {
+    border-bottom: none;
+}
+
+.expense-info {
+    flex: 1;
+}
+
+.expense-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.expense-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.expense-description {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.expense-amount {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.expense-amount .amount {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+}
+
+.category-tag {
+    background: #667eea;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Members List */
+.members-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.member-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.member-item:last-child {
+    border-bottom: none;
+}
+
+.member-info {
+    flex: 1;
+}
+
+.member-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.member-email {
+    font-size: 14px;
+    color: #666;
+}
+
+.role-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.role-badge.owner {
+    background: #667eea;
+    color: white;
+}
+
+.role-badge.admin {
+    background: #ffc107;
+    color: #333;
+}
+
+.role-badge.member {
+    background: #6c757d;
+    color: white;
+}
+
+/* Balance History */
+.balance-history {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.balance-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.balance-item:last-child {
+    border-bottom: none;
+}
+
+.balance-info {
+    flex: 1;
+}
+
+.balance-type {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+    text-transform: capitalize;
+}
+
+.balance-user {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.balance-date {
+    font-size: 12px;
+    color: #999;
+}
+
+.balance-amount {
+    font-size: 16px;
+    font-weight: 700;
+    text-align: right;
+}
+
+.balance-amount.positive {
+    color: #28a745;
+}
+
+.balance-amount.negative {
+    color: #dc3545;
+}
+
+/* File Upload Enhancements */
+.file-upload {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.file-upload.dragover {
+    border-color: #667eea;
+    background: #f0f4ff;
+    transform: scale(1.02);
+}
+
+.file-upload input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-selected {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #28a745;
+}
+
+.file-selected .file-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.file-selected .file-size {
+    font-size: 14px;
+    color: #666;
+}
+
+/* Modal Enhancements */
+.modal-content {
+    max-width: 600px;
+}
+
+.modal form .form-group:last-of-type {
+    margin-bottom: 24px;
+}
+
+/* Progress Indicators */
+.upload-progress {
+    margin-top: 16px;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .project-header-section {
+        padding: 20px;
+    }
+    
+    .project-header-section .d-flex {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .project-actions {
+        justify-content: stretch;
+    }
+    
+    .project-actions .btn {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .project-meta {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .expense-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .expense-amount {
+        align-items: flex-start;
+        flex-direction: row;
+        gap: 12px;
+    }
+    
+    .member-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .balance-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .balance-amount {
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .project-header-section h1 {
+        font-size: 24px;
+    }
+    
+    .expense-meta {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .modal-content {
+        margin: 5% auto;
+        width: 95%;
+        max-width: none;
+    }
+}
+
+/* Animation Classes */
+.expense-item.new {
+    animation: slideInFromTop 0.5s ease;
+}
+
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.balance-item.new {
+    animation: slideInFromRight 0.5s ease;
+}
+
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Tooltip for invite code */
+.invite-code::after {
+    content: 'Clic para copiar';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.invite-code:hover::after {
+    opacity: 1;
+    visibility: visible;
+    bottom: calc(100% + 8px);
+}
+
+/* Loading states */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.form-loading .btn[type="submit"] {
+    position: relative;
+    color: transparent;
+}
+
+.form-loading .btn[type="submit"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}

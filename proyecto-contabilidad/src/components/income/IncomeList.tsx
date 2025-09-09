@@ -90,7 +90,7 @@ export function IncomeList({ income, currentUserId, onUpdate }: IncomeListProps)
                 </span>
               )}
               <span>
-                Por: {item.user?.name || 'Usuario desconocido'}
+                Por: {item.user?.full_name || item.user?.email || 'Usuario desconocido'}
               </span>
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
                 {item.status === 'approved' ? 'Aprobado' : 

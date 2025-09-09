@@ -16,8 +16,8 @@ export interface Income {
   created_at: string
   updated_at: string
   user?: {
-    name: string
-    email: string
+    full_name?: string
+    email?: string
   }
 }
 
@@ -48,7 +48,7 @@ export const incomeService = {
       .select(`
         *,
         user:users!user_id (
-          name,
+          full_name,
           email
         )
       `)
@@ -65,7 +65,7 @@ export const incomeService = {
       .select(`
         *,
         user:users!user_id (
-          name,
+          full_name,
           email
         )
       `)
@@ -91,7 +91,6 @@ export const incomeService = {
       .select(`
         *,
         user:users!user_id (
-          name,
           email
         )
       `)

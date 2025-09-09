@@ -20,6 +20,11 @@ export const CURRENCIES = {
 export function formatCurrency(amount: number, currency: Currency = 'COP'): string {
   const currencyInfo = CURRENCIES[currency];
   
+  if (currency === 'COP') {
+    // Colombian peso formatting: $100,000 COP (no decimals, comma thousands separator)
+    return `$${new Intl.NumberFormat('es-CO').format(amount)} COP`;
+  }
+  
   return new Intl.NumberFormat(currencyInfo.locale, {
     style: 'currency',
     currency: currencyInfo.code,

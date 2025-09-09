@@ -124,14 +124,17 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                 <Input
                   id="amount"
                   type="number"
-                  step="0.01"
+                  step="1"
                   min="0"
-                  placeholder="0.00"
+                  placeholder="100000"
                   className="pl-8"
                   error={errors.amount?.message}
                   {...register('amount', { valueAsNumber: true })}
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Ingresa el monto sin decimales (ej: 100000 se mostrará como $100,000 COP)
+              </p>
             </div>
 
             <div className="space-y-2">

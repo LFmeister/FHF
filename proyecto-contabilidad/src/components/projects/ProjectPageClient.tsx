@@ -2,18 +2,22 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, DollarSign, Receipt, Settings, ArrowLeft, BarChart3 } from 'lucide-react'
+import { Plus, DollarSign, Receipt, Settings, ArrowLeft, BarChart3, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { AddBalanceForm } from '@/components/balances/AddBalanceForm'
 import { BalancesList } from '@/components/balances/BalancesList'
+import { AddIncomeForm } from '@/components/income/AddIncomeForm'
+import { IncomeList } from '@/components/income/IncomeList'
 import { AddExpenseForm } from '@/components/expenses/AddExpenseForm'
 import { ExpensesList } from '@/components/expenses/ExpensesList'
 import { ExpenseChart } from '@/components/charts/ExpenseChart'
 import { BalanceChart } from '@/components/charts/BalanceChart'
 import { projectsService } from '@/lib/projects'
 import { balancesService, type Balance } from '@/lib/balances'
+import { incomeService, type Income } from '@/lib/income'
 import { expensesService, type Expense } from '@/lib/expenses'
+import { formatCurrency } from '@/lib/currency'
 import { auth } from '@/lib/auth'
 
 interface ProjectPageClientProps {
@@ -26,11 +30,13 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
 
   const [project, setProject] = useState<any>(null)
   const [balances, setBalances] = useState<Balance[]>([])
+  const [income, setIncome] = useState<Income[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(initialTab || 'overview')
   const [showAddBalance, setShowAddBalance] = useState(false)
+  const [showAddIncome, setShowAddIncome] = useState(false)
   const [showAddExpense, setShowAddExpense] = useState(false)
 
   useEffect(() => {
@@ -48,6 +54,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
       setActiveTab(tab)
     }
     setShowAddBalance(false)
+    setShowAddIncome(false)
     setShowAddExpense(false)
   }
 
@@ -57,14 +64,16 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         const { user } = await auth.getCurrentUser()
         setUser(user)
 
-        const [projectData, balancesData, expensesData] = await Promise.all([
+        const [projectData, balancesData, incomeData, expensesData] = await Promise.all([
           projectsService.getProject(projectId),
           balancesService.getProjectBalances(projectId),
+          incomeService.getProjectIncome(projectId),
           expensesService.getProjectExpenses(projectId),
         ])
 
         setProject(projectData)
         setBalances(balancesData)
+        setIncome(incomeData)
         setExpenses(expensesData)
       } catch (error) {
         console.error('Error loading project data:', error)
@@ -85,6 +94,16 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
       setShowAddBalance(false)
     } catch (error) {
       console.error('Error updating balances:', error)
+    }
+  }
+
+  const handleIncomeUpdate = async () => {
+    try {
+      const incomeData = await incomeService.getProjectIncome(projectId)
+      setIncome(incomeData)
+      setShowAddIncome(false)
+    } catch (error) {
+      console.error('Error updating income:', error)
     }
   }
 
@@ -116,21 +135,13 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
   }
 
   const totalBalance = balances.reduce((sum, balance) => sum + balance.amount, 0)
+  const totalIncome = income.filter(i => i.status === 'approved').reduce((sum, inc) => sum + inc.amount, 0)
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
-  const remainingBalance = totalBalance - totalExpenses
+  const calculatedBalance = totalIncome - totalExpenses + totalBalance
 
-  const formatCurrency = (amount: number) => {
+  const formatAmount = (amount: number) => {
     const currency = project?.currency || 'COP'
-    if (currency === 'COP') {
-      return `$${new Intl.NumberFormat('es-CO').format(amount)} COP`
-    } else {
-      return new Intl.NumberFormat('en-AU', {
-        style: 'currency',
-        currency: 'AUD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      }).format(amount)
-    }
+    return formatCurrency(amount, currency as any)
   }
 
   return (
@@ -177,6 +188,17 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               Resumen
             </button>
             <button
+              onClick={() => handleTabChange('income')}
+              className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                activeTab === 'income'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <TrendingUp className="h-4 w-4 inline mr-2" />
+              Ingresos ({income.length})
+            </button>
+            <button
               onClick={() => handleTabChange('balances')}
               className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === 'balances'
@@ -185,7 +207,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               }`}
             >
               <DollarSign className="h-4 w-4 inline mr-2" />
-              Balances ({balances.length})
+              Balance Base ({balances.length})
             </button>
             <button
               onClick={() => handleTabChange('expenses')}
@@ -205,14 +227,14 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Balance Total</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(totalBalance)}
+              {formatAmount(totalIncome)}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {balances.length} entradas
+              {income.length} ingresos
             </p>
           </CardContent>
         </Card>
@@ -233,14 +255,14 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Balance Restante</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${remainingBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(remainingBalance)}
+            <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatAmount(calculatedBalance)}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {remainingBalance >= 0 ? 'Disponible' : 'Déficit'}
+              {calculatedBalance >= 0 ? 'Disponible' : 'Déficit'}
             </p>
           </CardContent>
         </Card>
@@ -253,6 +275,12 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               <AddBalanceForm
                 projectId={projectId}
                 onSuccess={handleBalanceUpdate}
+              />
+            )}
+            {showAddIncome && (
+              <AddIncomeForm
+                projectId={projectId}
+                onSuccess={handleIncomeUpdate}
               />
             )}
             {showAddExpense && (
@@ -271,28 +299,33 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Balances Recientes
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    Ingresos Recientes
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {balances.slice(0, 3).map((balance) => (
-                    <div key={balance.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                  {income.slice(0, 3).map((incomeItem) => (
+                    <div key={incomeItem.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
                       <div>
                         <p className="font-medium text-green-600">
-                          {formatCurrency(balance.amount)}
+                          {formatAmount(incomeItem.amount)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {balance.description || 'Sin descripción'}
+                          {incomeItem.title}
                         </p>
+                        {incomeItem.category && (
+                          <p className="text-xs text-gray-400">
+                            {incomeItem.category}
+                          </p>
+                        )}
                       </div>
                       <p className="text-xs text-gray-400">
-                        {new Date(balance.created_at).toLocaleDateString()}
+                        {new Date(incomeItem.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   ))}
-                  {balances.length === 0 && (
-                    <p className="text-gray-500 text-center py-4">No hay balances registrados</p>
+                  {income.length === 0 && (
+                    <p className="text-gray-500 text-center py-4">No hay ingresos registrados</p>
                   )}
                 </CardContent>
               </Card>
@@ -309,7 +342,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                     <div key={expense.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
                       <div>
                         <p className="font-medium text-red-600">
-                          -{formatCurrency(expense.amount)}
+                          -{formatAmount(expense.amount)}
                         </p>
                         <p className="text-sm text-gray-500">
                           {expense.description}
@@ -334,6 +367,29 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
           </div>
         )}
 
+        {activeTab === 'income' && (
+          <div className="space-y-6">
+            {showAddIncome && (
+              <AddIncomeForm
+                projectId={projectId}
+                onSuccess={handleIncomeUpdate}
+              />
+            )}
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-medium">Gestión de Ingresos</h2>
+              <Button onClick={() => setShowAddIncome(!showAddIncome)}>
+                <Plus className="h-4 w-4 mr-2" />
+                {showAddIncome ? 'Cancelar' : 'Agregar Ingreso'}
+              </Button>
+            </div>
+            <IncomeList
+              income={income}
+              currentUserId={user?.id || ''}
+              onUpdate={handleIncomeUpdate}
+            />
+          </div>
+        )}
+
         {activeTab === 'balances' && (
           <div className="space-y-6">
             {showAddBalance && (
@@ -343,10 +399,10 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               />
             )}
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-medium">Gestión de Balances</h2>
+              <h2 className="text-lg font-medium">Balance Base del Proyecto</h2>
               <Button onClick={() => setShowAddBalance(!showAddBalance)}>
                 <Plus className="h-4 w-4 mr-2" />
-                {showAddBalance ? 'Cancelar' : 'Agregar Balance'}
+                {showAddBalance ? 'Cancelar' : 'Agregar Balance Base'}
               </Button>
             </div>
             <BalancesList

@@ -38,8 +38,14 @@ function requireLogin() {
     }
 }
 
-function formatCurrency($amount) {
-    return '$' . number_format($amount, 2);
+function formatCurrency($amount, $currency = 'COP') {
+    if ($currency === 'COP') {
+        // Colombian peso formatting: $100,000 COP
+        return '$' . number_format($amount, 0, ',', ',') . ' COP';
+    } else {
+        // Default formatting for other currencies
+        return '$' . number_format($amount, 2);
+    }
 }
 
 function formatDate($date) {

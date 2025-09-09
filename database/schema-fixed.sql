@@ -37,6 +37,24 @@ CREATE TABLE public.project_members (
     UNIQUE(project_id, user_id)
 );
 
+-- Income table
+CREATE TABLE public.income (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
+    category VARCHAR(100),
+    income_date DATE NOT NULL,
+    receipt_url TEXT,
+    status VARCHAR(20) DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
+    approved_by UUID REFERENCES public.users(id),
+    approved_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Expenses table
 CREATE TABLE public.expenses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -109,6 +127,9 @@ CREATE INDEX idx_projects_owner_id ON public.projects(owner_id);
 CREATE INDEX idx_projects_invite_code ON public.projects(invite_code);
 CREATE INDEX idx_project_members_project_id ON public.project_members(project_id);
 CREATE INDEX idx_project_members_user_id ON public.project_members(user_id);
+CREATE INDEX idx_income_project_id ON public.income(project_id);
+CREATE INDEX idx_income_user_id ON public.income(user_id);
+CREATE INDEX idx_income_date ON public.income(income_date);
 CREATE INDEX idx_expenses_project_id ON public.expenses(project_id);
 CREATE INDEX idx_expenses_user_id ON public.expenses(user_id);
 CREATE INDEX idx_expenses_date ON public.expenses(expense_date);
@@ -122,6 +143,7 @@ CREATE INDEX idx_categories_project_id ON public.categories(project_id);
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.project_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.income ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.balance_adjustments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.file_uploads ENABLE ROW LEVEL SECURITY;
@@ -171,6 +193,27 @@ CREATE POLICY "Project owners can manage members" ON public.project_members
 
 CREATE POLICY "Users can join projects" ON public.project_members
     FOR INSERT WITH CHECK (user_id = auth.uid());
+
+-- Income policies
+CREATE POLICY "Project members can view income" ON public.income
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.project_members 
+            WHERE project_id = income.project_id AND user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Project members can create income" ON public.income
+    FOR INSERT WITH CHECK (
+        user_id = auth.uid() AND
+        EXISTS (
+            SELECT 1 FROM public.project_members 
+            WHERE project_id = income.project_id AND user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update own income" ON public.income
+    FOR UPDATE USING (user_id = auth.uid());
 
 -- Expenses policies
 CREATE POLICY "Project members can view expenses" ON public.expenses
@@ -276,34 +319,79 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
 CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON public.projects
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_income_updated_at BEFORE UPDATE ON public.income
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_expenses_updated_at BEFORE UPDATE ON public.expenses
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Function to update project balance
-CREATE OR REPLACE FUNCTION update_project_balance()
+-- Function to calculate project balance from income and expenses
+CREATE OR REPLACE FUNCTION calculate_project_balance(project_uuid UUID)
+RETURNS DECIMAL(15,2) AS $$
+DECLARE
+    total_income DECIMAL(15,2) := 0;
+    total_expenses DECIMAL(15,2) := 0;
+    balance_adjustments DECIMAL(15,2) := 0;
+BEGIN
+    -- Calculate total approved income
+    SELECT COALESCE(SUM(amount), 0) INTO total_income
+    FROM public.income
+    WHERE project_id = project_uuid AND status = 'approved';
+    
+    -- Calculate total approved expenses
+    SELECT COALESCE(SUM(amount), 0) INTO total_expenses
+    FROM public.expenses
+    WHERE project_id = project_uuid AND status = 'approved';
+    
+    -- Calculate balance adjustments (for backward compatibility)
+    SELECT COALESCE(SUM(amount), 0) INTO balance_adjustments
+    FROM public.balance_adjustments
+    WHERE project_id = project_uuid;
+    
+    -- Return income - expenses + adjustments
+    RETURN total_income - total_expenses + balance_adjustments;
+END;
+$$ language 'plpgsql';
+
+-- Function to update project balance when income/expenses change
+CREATE OR REPLACE FUNCTION update_project_balance_on_change()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF TG_OP = 'INSERT' THEN
-        -- Update balance based on the type of adjustment
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
         UPDATE public.projects 
-        SET current_balance = current_balance + NEW.amount
-        WHERE id = NEW.project_id;
-        RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
-        -- Reverse the balance change
-        UPDATE public.projects 
-        SET current_balance = current_balance - OLD.amount
-        WHERE id = OLD.project_id;
-        RETURN OLD;
+        SET current_balance = calculate_project_balance(
+            CASE 
+                WHEN TG_OP = 'DELETE' THEN OLD.project_id
+                ELSE NEW.project_id
+            END
+        )
+        WHERE id = CASE 
+            WHEN TG_OP = 'DELETE' THEN OLD.project_id
+            ELSE NEW.project_id
+        END;
+        
+        IF TG_OP = 'DELETE' THEN
+            RETURN OLD;
+        ELSE
+            RETURN NEW;
+        END IF;
     END IF;
     RETURN NULL;
 END;
 $$ language 'plpgsql';
 
--- Trigger for balance adjustments
-CREATE TRIGGER trigger_update_project_balance
-    AFTER INSERT OR DELETE ON public.balance_adjustments
-    FOR EACH ROW EXECUTE FUNCTION update_project_balance();
+-- Triggers for automatic balance calculation
+CREATE TRIGGER trigger_update_balance_on_income_change
+    AFTER INSERT OR UPDATE OR DELETE ON public.income
+    FOR EACH ROW EXECUTE FUNCTION update_project_balance_on_change();
+
+CREATE TRIGGER trigger_update_balance_on_expense_change
+    AFTER INSERT OR UPDATE OR DELETE ON public.expenses
+    FOR EACH ROW EXECUTE FUNCTION update_project_balance_on_change();
+
+CREATE TRIGGER trigger_update_balance_on_adjustment_change
+    AFTER INSERT OR UPDATE OR DELETE ON public.balance_adjustments
+    FOR EACH ROW EXECUTE FUNCTION update_project_balance_on_change();
 
 -- Function to automatically add project owner as member
 CREATE OR REPLACE FUNCTION add_project_owner_as_member()

@@ -16,7 +16,7 @@ export interface ProjectMember {
   id: string
   project_id: string
   user_id: string
-  role: 'owner' | 'member'
+  role: 'owner' | 'admin' | 'normal' | 'view'
   joined_at: string
   user?: {
     full_name: string
@@ -142,7 +142,7 @@ export const projectsService = {
       .from('project_members')
       .select(`
         *,
-        users (
+        user:users!user_id (
           full_name,
           email
         )
@@ -185,7 +185,7 @@ export const projectsService = {
       .insert({
         project_id: project.id,
         user_id: user.id,
-        role: 'member',
+        role: 'view',
       })
 
     if (memberError) throw memberError
@@ -240,5 +240,47 @@ export const projectsService = {
 
     if (error) throw error
     return data
+  },
+
+  // Update member role
+  async updateMemberRole(projectId: string, userId: string, newRole: 'admin' | 'normal' | 'view') {
+    const { error } = await supabase
+      .from('project_members')
+      .update({ role: newRole })
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+
+    if (error) throw error
+  },
+
+  // Get user role in project
+  async getUserRole(projectId: string, userId: string) {
+    const { data, error } = await supabase
+      .from('project_members')
+      .select('role')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .single()
+
+    if (error) throw error
+    return data.role
+  },
+
+  // Check if user has permission
+  async hasPermission(projectId: string, userId: string, permission: 'read' | 'write' | 'delete' | 'admin') {
+    const role = await this.getUserRole(projectId, userId)
+    
+    switch (permission) {
+      case 'read':
+        return ['owner', 'admin', 'normal', 'view'].includes(role)
+      case 'write':
+        return ['owner', 'admin', 'normal'].includes(role)
+      case 'delete':
+        return ['owner', 'admin'].includes(role)
+      case 'admin':
+        return ['owner'].includes(role)
+      default:
+        return false
+    }
   },
 }

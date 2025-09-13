@@ -51,6 +51,24 @@ export const auth = {
     return { data, error }
   },
 
+  // Update user's full name (in user metadata)
+  async updateFullName(fullName: string) {
+    const { data, error } = await supabase.auth.updateUser({
+      data: {
+        full_name: fullName,
+      },
+    })
+    return { data, error }
+  },
+
+  // Update user's email (may require email confirmation depending on project settings)
+  async updateEmail(email: string) {
+    const { data, error } = await supabase.auth.updateUser({
+      email,
+    })
+    return { data, error }
+  },
+
   // Get current user
   async getCurrentUser() {
     const { data: { user }, error } = await supabase.auth.getUser()

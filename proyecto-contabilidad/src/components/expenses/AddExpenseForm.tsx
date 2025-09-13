@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useState, useEffect } from 'react'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Receipt, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { expensesService } from '@/lib/expenses'
+import { projectsService, type ProjectMember } from '@/lib/projects'
+import { supabase } from '@/lib/supabase'
 import { expenseSchema, type ExpenseFormData } from '@/lib/validations'
 
 interface AddExpenseFormProps {
@@ -32,15 +34,48 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const [uploadingFiles, setUploadingFiles] = useState(false)
+  const [members, setMembers] = useState<ProjectMember[]>([])
+  const [currentUser, setCurrentUser] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          setCurrentUser(user.id)
+        }
+
+        // Get project members
+        const membersData = await projectsService.getProjectMembers(projectId)
+        setMembers(membersData)
+      } catch (error) {
+        console.error('Error loading data:', error)
+      }
+    }
+
+    loadData()
+  }, [projectId])
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
+    control,
+    getValues,
   } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
   })
+
+  // Set current user as default when data loads
+  useEffect(() => {
+    const currentVal = getValues('performed_by')
+    if (currentUser && (!currentVal || currentVal === '')) {
+      setValue('performed_by', currentUser, { shouldValidate: true })
+    }
+  }, [currentUser, getValues, setValue])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -64,7 +99,8 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
         {
           amount: Number(data.amount),
           description: data.description,
-          category: data.category
+          category: data.category,
+          performed_by: data.performed_by
         }
       )
 
@@ -77,6 +113,10 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
       }
 
       reset()
+      // Keep current user selected after reset
+      if (currentUser) {
+        setValue('performed_by', currentUser)
+      }
       setFiles([])
       onSuccess?.()
     } catch (err: any) {
@@ -107,14 +147,15 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {error && (
             <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
               {error}
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Monto, Categoría y Usuario */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label htmlFor="amount" className="text-sm font-medium">
                 Monto *
@@ -133,13 +174,13 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Ingresa el monto sin decimales (ej: 100000 se mostrará como $100,000 COP)
+                Sin decimales (ej: 100000)
               </p>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="category" className="text-sm font-medium">
-                Categoría
+                Categoría (Opcional)
               </label>
               <select
                 id="category"
@@ -154,16 +195,61 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                 ))}
               </select>
             </div>
+
+            <div className="space-y-2">
+              <label htmlFor="performed_by" className="text-sm font-medium">
+                Realizado por *
+              </label>
+              <Controller
+                name="performed_by"
+                control={control}
+                render={({ field }) => (
+                  <select
+                    id="performed_by"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={(field.value && field.value !== '') ? field.value : (currentUser || '')}
+                    onChange={field.onChange}
+                  >
+                    <option value="">Seleccionar usuario</option>
+                    {currentUser && !members.some(m => m.user_id === currentUser) && (
+                      <option value={currentUser}>Tú</option>
+                    )}
+                    {members.map((member) => (
+                      <option key={member.user_id} value={member.user_id}>
+                        {member.user?.full_name || member.user?.email || 'Sin nombre'}
+                        {member.user_id === currentUser && ' (Tú)'}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              />
+              {errors.performed_by && (
+                <p className="text-sm text-destructive">{errors.performed_by.message}</p>
+              )}
+            </div>
           </div>
 
+          {/* Registrado por */}
+          <div className="bg-gray-50 p-3 rounded-md border">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span className="font-medium">Registrado por:</span>
+              <span>
+                {members.find(m => m.user_id === currentUser)?.user?.full_name || 
+                 members.find(m => m.user_id === currentUser)?.user?.email || 
+                 'Usuario actual'}
+              </span>
+            </div>
+          </div>
+
+          {/* Descripción mejorada */}
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">
               Descripción *
             </label>
             <textarea
               id="description"
-              placeholder="Describe el gasto realizado..."
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Describe el gasto realizado, proveedor, detalles del producto o servicio..."
+              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
               {...register('description')}
             />
             {errors.description && (

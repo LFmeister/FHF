@@ -5,14 +5,16 @@ import { Trash2, Edit, DollarSign, Calendar, User } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { balancesService, type Balance } from '@/lib/balances'
+import { permissions, type UserRole } from '@/lib/permissions'
 
 interface BalancesListProps {
   balances: Balance[]
   currentUserId: string
+  userRole?: UserRole
   onUpdate?: () => void
 }
 
-export function BalancesList({ balances, currentUserId, onUpdate }: BalancesListProps) {
+export function BalancesList({ balances, currentUserId, userRole = 'view', onUpdate }: BalancesListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleDelete = async (balanceId: string) => {
@@ -113,25 +115,29 @@ export function BalancesList({ balances, currentUserId, onUpdate }: BalancesList
                   
                   <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                     <div className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      <span>
-                        {balance.user?.full_name || balance.user?.email || 'Usuario desconocido'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       <span>{formatDate(balance.created_at)}</span>
                     </div>
                   </div>
+                  
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mt-2">
+                    <span>
+                      <strong>Realizado por:</strong> {balance.performed_user?.full_name || balance.performed_user?.email || 'Usuario desconocido'}
+                    </span>
+                    <span>
+                      <strong>Registrado por:</strong> {balance.user?.full_name || balance.user?.email || 'Usuario desconocido'}
+                    </span>
+                  </div>
                 </div>
 
-                {balance.created_by === currentUserId && (
+                {(permissions.canDelete(userRole) || (balance.created_by === currentUserId && permissions.canEdit(userRole))) && (
                   <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(balance.id)}
                       disabled={deletingId === balance.id}
+                      className="text-red-600 hover:text-red-800 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

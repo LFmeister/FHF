@@ -7,9 +7,14 @@ export interface Expense {
   description: string
   category: string | null
   created_by: string
+  performed_by: string
   created_at: string
   updated_at: string
   user?: {
+    full_name: string
+    email: string
+  }
+  performed_user?: {
     full_name: string
     email: string
   }
@@ -28,7 +33,7 @@ export interface ExpenseFile {
 
 export const expensesService = {
   // Create a new expense
-  async createExpense(projectId: string, expenseData: { amount: number; description: string; category?: string }) {
+  async createExpense(projectId: string, expenseData: { amount: number; description: string; category?: string; performed_by?: string }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Usuario no autenticado')
 
@@ -39,11 +44,16 @@ export const expensesService = {
         amount: expenseData.amount,
         description: expenseData.description,
         category: expenseData.category,
-        created_by: user.id,
+        created_by: user.id, // Usuario que registra (sesión actual)
+        performed_by: expenseData.performed_by || user.id, // Usuario que realizó la transacción
       })
       .select(`
         *,
         user:users!created_by (
+          full_name,
+          email
+        ),
+        performed_user:users!performed_by (
           full_name,
           email
         )
@@ -61,6 +71,10 @@ export const expensesService = {
       .select(`
         *,
         user:users!created_by (
+          full_name,
+          email
+        ),
+        performed_user:users!performed_by (
           full_name,
           email
         ),
@@ -86,6 +100,10 @@ export const expensesService = {
       .select(`
         *,
         user:users!created_by (
+          full_name,
+          email
+        ),
+        performed_user:users!performed_by (
           full_name,
           email
         ),
@@ -149,6 +167,16 @@ export const expensesService = {
       .getPublicUrl(filePath)
 
     return data.publicUrl
+  },
+
+  // Upload multiple files for expense
+  async uploadFiles(expenseId: string, files: FileList) {
+    const uploadPromises = Array.from(files).map(file => 
+      this.uploadExpenseFile(expenseId, file)
+    )
+    
+    const results = await Promise.all(uploadPromises)
+    return results
   },
 
   // Delete expense file

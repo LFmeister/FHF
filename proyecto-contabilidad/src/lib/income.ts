@@ -10,14 +10,19 @@ export interface Income {
   category: string | null
   income_date: string
   receipt_url: string | null
-  status: 'pending' | 'approved' | 'rejected'
+  status: string
+  performed_by: string
   approved_by: string | null
   approved_at: string | null
   created_at: string
   updated_at: string
   user?: {
-    full_name?: string
-    email?: string
+    full_name: string
+    email: string
+  }
+  performed_user?: {
+    full_name: string
+    email: string
   }
 }
 
@@ -29,6 +34,7 @@ export const incomeService = {
     amount: number
     category?: string
     income_date: string
+    performed_by?: string
   }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Usuario no autenticado')
@@ -37,17 +43,22 @@ export const incomeService = {
       .from('income')
       .insert({
         project_id: projectId,
-        user_id: user.id,
+        user_id: user.id, // Usuario que registra (sesión actual)
         title: incomeData.title,
         description: incomeData.description,
         amount: incomeData.amount,
         category: incomeData.category,
         income_date: incomeData.income_date,
         status: 'approved',
+        performed_by: incomeData.performed_by || user.id, // Usuario que realizó la transacción
       })
       .select(`
         *,
         user:users!user_id (
+          full_name,
+          email
+        ),
+        performed_user:users!performed_by (
           full_name,
           email
         )
@@ -65,6 +76,10 @@ export const incomeService = {
       .select(`
         *,
         user:users!user_id (
+          full_name,
+          email
+        ),
+        performed_user:users!performed_by (
           full_name,
           email
         )

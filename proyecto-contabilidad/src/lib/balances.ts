@@ -6,17 +6,23 @@ export interface Balance {
   amount: number
   description: string | null
   created_by: string
+  performed_by: string
+  balance_date: string
   created_at: string
   updated_at: string
   user?: {
     full_name: string
     email: string
   }
+  performed_user?: {
+    full_name: string
+    email: string
+  }
 }
 
 export const balancesService = {
-  // Create a new balance entry
-  async createBalance(projectId: string, balanceData: { amount: number; description?: string }) {
+  // Create a new balance
+  async createBalance(projectId: string, balanceData: { amount: number; description?: string; date?: string; performed_by?: string }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Usuario no autenticado')
 
@@ -26,11 +32,17 @@ export const balancesService = {
         project_id: projectId,
         amount: balanceData.amount,
         description: balanceData.description,
-        created_by: user.id,
+        created_by: user.id, // Usuario que registra (sesión actual)
+        performed_by: balanceData.performed_by || user.id, // Usuario que realizó la transacción
+        balance_date: balanceData.date || new Date().toISOString().split('T')[0],
       })
       .select(`
         *,
         user:users!created_by (
+          full_name,
+          email
+        ),
+        performed_user:users!performed_by (
           full_name,
           email
         )
@@ -48,6 +60,10 @@ export const balancesService = {
       .select(`
         *,
         user:users!created_by (
+          full_name,
+          email
+        ),
+        performed_user:users!performed_by (
           full_name,
           email
         )

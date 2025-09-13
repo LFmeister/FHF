@@ -6,14 +6,16 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { incomeService, type Income } from '@/lib/income'
 import { formatCurrency } from '@/lib/currency'
+import { permissions, type UserRole } from '@/lib/permissions'
 
 interface IncomeListProps {
   income: Income[]
   currentUserId: string
+  userRole?: UserRole
   onUpdate?: () => void
 }
 
-export function IncomeList({ income, currentUserId, onUpdate }: IncomeListProps) {
+export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate }: IncomeListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleDelete = async (incomeId: string) => {
@@ -65,7 +67,7 @@ export function IncomeList({ income, currentUserId, onUpdate }: IncomeListProps)
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {item.user_id === currentUserId && (
+                {(permissions.canDelete(userRole) || (item.user_id === currentUserId && permissions.canEdit(userRole))) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -89,12 +91,17 @@ export function IncomeList({ income, currentUserId, onUpdate }: IncomeListProps)
                   {item.category}
                 </span>
               )}
-              <span>
-                Por: {item.user?.full_name || item.user?.email || 'Usuario desconocido'}
-              </span>
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
                 {item.status === 'approved' ? 'Aprobado' : 
                  item.status === 'pending' ? 'Pendiente' : 'Rechazado'}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mt-2">
+              <span>
+                <strong>Realizado por:</strong> {item.performed_user?.full_name || item.performed_user?.email || 'Usuario desconocido'}
+              </span>
+              <span>
+                <strong>Registrado por:</strong> {item.user?.full_name || item.user?.email || 'Usuario desconocido'}
               </span>
             </div>
             <div className="text-xs text-gray-400 mt-2">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, DollarSign, Receipt, Settings, ArrowLeft, BarChart3, TrendingUp } from 'lucide-react'
+import { Plus, DollarSign, Receipt, Settings, ArrowLeft, BarChart3, TrendingUp, Users, Boxes, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { AddBalanceForm } from '@/components/balances/AddBalanceForm'
@@ -11,14 +11,19 @@ import { AddIncomeForm } from '@/components/income/AddIncomeForm'
 import { IncomeList } from '@/components/income/IncomeList'
 import { AddExpenseForm } from '@/components/expenses/AddExpenseForm'
 import { ExpensesList } from '@/components/expenses/ExpensesList'
+import { InventoryTab } from '@/components/inventory/InventoryTab'
+import { AccountSettingsModal } from '@/components/account/AccountSettingsModal'
 import { ExpenseChart } from '@/components/charts/ExpenseChart'
 import { BalanceChart } from '@/components/charts/BalanceChart'
+import { BalanceAnalyticsChart } from '@/components/charts/BalanceAnalyticsChart'
 import { projectsService } from '@/lib/projects'
 import { balancesService, type Balance } from '@/lib/balances'
 import { incomeService, type Income } from '@/lib/income'
 import { expensesService, type Expense } from '@/lib/expenses'
 import { formatCurrency } from '@/lib/currency'
 import { auth } from '@/lib/auth'
+import { permissions, type UserRole } from '@/lib/permissions'
+import { ProjectMembers } from '@/components/projects/ProjectMembers'
 
 interface ProjectPageClientProps {
   projectId: string
@@ -33,11 +38,13 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
   const [income, setIncome] = useState<Income[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [user, setUser] = useState<any>(null)
+  const [userRole, setUserRole] = useState<UserRole>('view')
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(initialTab || 'overview')
   const [showAddBalance, setShowAddBalance] = useState(false)
   const [showAddIncome, setShowAddIncome] = useState(false)
   const [showAddExpense, setShowAddExpense] = useState(false)
+  const [showAccountSettings, setShowAccountSettings] = useState(false)
 
   useEffect(() => {
     const handleSettingsToggle = () => {
@@ -62,19 +69,25 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     const loadData = async () => {
       try {
         const { user } = await auth.getCurrentUser()
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
         setUser(user)
 
-        const [projectData, balancesData, incomeData, expensesData] = await Promise.all([
+        const [projectData, balancesData, incomeData, expensesData, role] = await Promise.all([
           projectsService.getProject(projectId),
           balancesService.getProjectBalances(projectId),
           incomeService.getProjectIncome(projectId),
           expensesService.getProjectExpenses(projectId),
+          projectsService.getUserRole(projectId, user.id),
         ])
 
         setProject(projectData)
         setBalances(balancesData)
         setIncome(incomeData)
         setExpenses(expensesData)
+        setUserRole(role as UserRole)
       } catch (error) {
         console.error('Error loading project data:', error)
       } finally {
@@ -117,6 +130,26 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     }
   }
 
+  const refreshUser = async () => {
+    try {
+      const { user } = await auth.getCurrentUser()
+      setUser(user)
+    } catch (e) {
+      console.error('Error refreshing user:', e)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await auth.signOut()
+      if (error) {
+        console.error('Error al cerrar sesión:', error)
+      }
+    } finally {
+      router.push('/auth/login')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -144,6 +177,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     return formatCurrency(amount, currency as any)
   }
 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
@@ -160,17 +194,27 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         </div>
 
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-primary-800 mb-2">{project.name}</h1>
-          {project.description && (
-            <p className="text-primary-600 mb-3">{project.description}</p>
-          )}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-primary-500">
-            <span>
-              Código: <span className="font-mono bg-primary-100 px-2 py-1 rounded">{project.invite_code}</span>
-            </span>
-            <span>
-              Moneda: <span className="font-semibold">{project?.currency || 'COP'}</span>
-            </span>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold text-primary-800 mb-2">{project.name}</h1>
+              {project.description && (
+                <p className="text-primary-600 mb-3">{project.description}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-4 text-sm text-primary-500">
+                <span>
+                  Código: <span className="font-mono bg-primary-100 px-2 py-1 rounded">{project.invite_code}</span>
+                </span>
+                <span>
+                  Moneda: <span className="font-semibold">{project?.currency || 'COP'}</span>
+                </span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${permissions.getRoleColor(userRole)}`}>
+                  Tu rol: {permissions.getRoleDisplayName(userRole)}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Removed buttons - now handled in layout */}
+            </div>
           </div>
         </div>
 
@@ -187,86 +231,137 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               <BarChart3 className="h-4 w-4 inline mr-2" />
               Resumen
             </button>
-            <button
-              onClick={() => handleTabChange('income')}
-              className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'income'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <TrendingUp className="h-4 w-4 inline mr-2" />
-              Ingresos ({income.length})
-            </button>
-            <button
-              onClick={() => handleTabChange('balances')}
-              className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'balances'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <DollarSign className="h-4 w-4 inline mr-2" />
-              Balance Base ({balances.length})
-            </button>
-            <button
-              onClick={() => handleTabChange('expenses')}
-              className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'expenses'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Receipt className="h-4 w-4 inline mr-2" />
-              Gastos ({expenses.length})
-            </button>
+            {permissions.canEdit(userRole) && (
+              <button
+                onClick={() => handleTabChange('income')}
+                className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'income'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <TrendingUp className="h-4 w-4 inline mr-2" />
+                Ingresos ({income.length})
+              </button>
+            )}
+            {permissions.canEdit(userRole) && (
+              <button
+                onClick={() => handleTabChange('balances')}
+                className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'balances'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <DollarSign className="h-4 w-4 inline mr-2" />
+                Balance ({balances.length})
+              </button>
+            )}
+            {permissions.canEdit(userRole) && (
+              <button
+                onClick={() => handleTabChange('expenses')}
+                className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'expenses'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Receipt className="h-4 w-4 inline mr-2" />
+                Gastos ({expenses.length})
+              </button>
+            )}
+            {permissions.canEdit(userRole) && (
+              <button
+                onClick={() => handleTabChange('inventory')}
+                className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'inventory'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Boxes className="h-4 w-4 inline mr-2" />
+                Inventario
+              </button>
+            )}
+            {permissions.canManageMembers(userRole) && (
+              <button
+                onClick={() => handleTabChange('members')}
+                className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'members'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Users className="h-4 w-4 inline mr-2" />
+                Miembros
+              </button>
+            )}
+            {permissions.canManageProject(userRole) && (
+              <button
+                onClick={() => handleTabChange('settings')}
+                className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'settings'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Settings className="h-4 w-4 inline mr-2" />
+                Configuración
+              </button>
+            )}
           </nav>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatAmount(totalIncome)}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {income.length} ingresos
-            </p>
-          </CardContent>
-        </Card>
+      {/* Mostrar las tarjetas de resumen en todas las pestañas EXCEPTO en Balance e Inventario */}
+      {activeTab !== 'balances' && activeTab !== 'inventory' && (
+        <div className={`grid gap-6 mb-6 ${userRole === 'view' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {formatAmount(totalIncome)}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {income.length} ingresos
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalExpenses)}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {expenses.length} gastos
-            </p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {formatCurrency(totalExpenses)}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {expenses.length} gastos
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatAmount(calculatedBalance)}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {calculatedBalance >= 0 ? 'Disponible' : 'Déficit'}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Solo mostrar Balance Final si el usuario NO es de vista */}
+          {userRole !== 'view' && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatAmount(calculatedBalance)}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {calculatedBalance >= 0 ? 'Disponible' : 'Déficit'}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       <div>
         {activeTab === 'overview' && (
@@ -290,8 +385,11 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               />
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <BalanceChart balances={balances} expenses={expenses} />
+            <div className={`grid gap-6 ${userRole === 'view' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
+              {/* Solo mostrar BalanceChart si el usuario NO es de vista */}
+              {userRole !== 'view' && (
+                <BalanceChart balances={balances} expenses={expenses} />
+              )}
               <ExpenseChart expenses={expenses} totalExpenses={totalExpenses} />
             </div>
 
@@ -306,7 +404,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                 <CardContent>
                   {income.slice(0, 3).map((incomeItem) => (
                     <div key={incomeItem.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium text-green-600">
                           {formatAmount(incomeItem.amount)}
                         </p>
@@ -318,6 +416,14 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                             {incomeItem.category}
                           </p>
                         )}
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mt-1">
+                          <span>
+                            <strong>Realizado por:</strong> {incomeItem.performed_user?.full_name || incomeItem.performed_user?.email || 'Usuario desconocido'}
+                          </span>
+                          <span>
+                            <strong>Registrado por:</strong> {incomeItem.user?.full_name || incomeItem.user?.email || 'Usuario desconocido'}
+                          </span>
+                        </div>
                       </div>
                       <p className="text-xs text-gray-400">
                         {new Date(incomeItem.created_at).toLocaleDateString()}
@@ -340,7 +446,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                 <CardContent>
                   {expenses.slice(0, 3).map((expense) => (
                     <div key={expense.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium text-red-600">
                           -{formatAmount(expense.amount)}
                         </p>
@@ -352,6 +458,14 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                             {expense.category}
                           </p>
                         )}
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mt-1">
+                          <span>
+                            <strong>Realizado por:</strong> {expense.performed_user?.full_name || expense.performed_user?.email || (expense.performed_by === (user?.id || '') ? 'Tú' : 'Usuario desconocido')}
+                          </span>
+                          <span>
+                            <strong>Registrado por:</strong> {expense.user?.full_name || expense.user?.email || 'Usuario desconocido'}
+                          </span>
+                        </div>
                       </div>
                       <p className="text-xs text-gray-400">
                         {new Date(expense.created_at).toLocaleDateString()}
@@ -377,14 +491,17 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
             )}
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-medium">Gestión de Ingresos</h2>
-              <Button onClick={() => setShowAddIncome(!showAddIncome)}>
-                <Plus className="h-4 w-4 mr-2" />
-                {showAddIncome ? 'Cancelar' : 'Agregar Ingreso'}
-              </Button>
+              {permissions.canEdit(userRole) && (
+                <Button onClick={() => setShowAddIncome(!showAddIncome)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {showAddIncome ? 'Cancelar' : 'Agregar Ingreso'}
+                </Button>
+              )}
             </div>
             <IncomeList
               income={income}
               currentUserId={user?.id || ''}
+              userRole={userRole}
               onUpdate={handleIncomeUpdate}
             />
           </div>
@@ -399,15 +516,22 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               />
             )}
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-medium">Balance Base del Proyecto</h2>
-              <Button onClick={() => setShowAddBalance(!showAddBalance)}>
-                <Plus className="h-4 w-4 mr-2" />
-                {showAddBalance ? 'Cancelar' : 'Agregar Balance Base'}
-              </Button>
+              <h2 className="text-lg font-medium">Balance del Proyecto</h2>
+              {permissions.canEdit(userRole) && (
+                <Button onClick={() => setShowAddBalance(!showAddBalance)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {showAddBalance ? 'Cancelar' : 'Agregar Balance'}
+                </Button>
+              )}
             </div>
+            
+            {/* Gráficas de análisis de balance */}
+            <BalanceAnalyticsChart balances={balances} />
+            
             <BalancesList
               balances={balances}
               currentUserId={user?.id || ''}
+              userRole={userRole}
               onUpdate={handleBalanceUpdate}
             />
           </div>
@@ -423,15 +547,34 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
             )}
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-medium">Gestión de Gastos</h2>
-              <Button onClick={() => setShowAddExpense(!showAddExpense)}>
-                <Plus className="h-4 w-4 mr-2" />
-                {showAddExpense ? 'Cancelar' : 'Agregar Gasto'}
-              </Button>
+              {permissions.canEdit(userRole) && (
+                <Button onClick={() => setShowAddExpense(!showAddExpense)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {showAddExpense ? 'Cancelar' : 'Agregar Gasto'}
+                </Button>
+              )}
             </div>
             <ExpensesList
               expenses={expenses}
               currentUserId={user?.id || ''}
+              userRole={userRole}
               onUpdate={handleExpenseUpdate}
+            />
+          </div>
+        )}
+
+        {activeTab === 'inventory' && (
+          <div className="space-y-6">
+            <InventoryTab projectId={projectId} userRole={userRole} />
+          </div>
+        )}
+
+        {activeTab === 'members' && (
+          <div className="space-y-6">
+            <ProjectMembers
+              projectId={projectId}
+              currentUserId={user?.id || ''}
+              userRole={userRole}
             />
           </div>
         )}
@@ -524,6 +667,13 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
           </div>
         )}
       </div>
+      <AccountSettingsModal
+        isOpen={showAccountSettings}
+        onClose={() => setShowAccountSettings(false)}
+        currentEmail={user?.email || ''}
+        currentFullName={(user?.user_metadata as any)?.full_name || ''}
+        onUpdated={refreshUser}
+      />
     </div>
   )
 }

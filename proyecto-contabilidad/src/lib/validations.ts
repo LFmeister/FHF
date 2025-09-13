@@ -43,12 +43,15 @@ export const projectSchema = z.object({
 export const balanceSchema = z.object({
   amount: z.coerce.number().positive('El monto debe ser positivo'),
   description: z.string().optional(),
+  date: z.string().min(1, 'La fecha es requerida'),
+  performed_by: z.string().min(1, 'El usuario que realizó la transacción es requerido'),
 })
 
 export const expenseSchema = z.object({
   amount: z.coerce.number().positive('El monto debe ser positivo'),
   description: z.string().min(1, 'La descripción es requerida'),
   category: z.string().optional(),
+  performed_by: z.string().min(1, 'El usuario que realizó la transacción es requerido'),
 })
 
 export const joinProjectSchema = z.object({

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { LogOut, Settings, User, FolderOpen, Home } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { AccountSettingsModal } from '@/components/account/AccountSettingsModal'
 import { auth } from '@/lib/auth'
 
 export default function DashboardLayout({
@@ -13,6 +14,7 @@ export default function DashboardLayout({
 }) {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [showAccountSettings, setShowAccountSettings] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   
@@ -46,6 +48,15 @@ export default function DashboardLayout({
   const handleSignOut = async () => {
     await auth.signOut()
     router.push('/auth/login')
+  }
+
+  const refreshUser = async () => {
+    try {
+      const { user } = await auth.getCurrentUser()
+      setUser(user)
+    } catch (e) {
+      console.error('Error refreshing user:', e)
+    }
   }
 
   if (loading) {
@@ -97,6 +108,14 @@ export default function DashboardLayout({
                     </Button>
                   )}
                   <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Ajustes de cuenta"
+                    onClick={() => setShowAccountSettings(true)}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                  <Button
                     variant="outline"
                     size="sm"
                     onClick={handleSignOut}
@@ -115,6 +134,14 @@ export default function DashboardLayout({
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {children}
       </main>
+      
+      <AccountSettingsModal
+        isOpen={showAccountSettings}
+        onClose={() => setShowAccountSettings(false)}
+        currentEmail={user?.email || ''}
+        currentFullName={user?.user_metadata?.full_name || ''}
+        onUpdated={refreshUser}
+      />
     </div>
   )
 }

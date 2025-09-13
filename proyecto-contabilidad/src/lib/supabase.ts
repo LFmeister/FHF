@@ -86,6 +86,50 @@ export type Database = {
           joined_at?: string
         }
       }
+      income: {
+        Row: {
+          id: string
+          project_id: string
+          user_id: string
+          title: string
+          description: string | null
+          amount: number
+          category: string | null
+          income_date: string
+          status: string
+          performed_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          user_id: string
+          title: string
+          description?: string | null
+          amount: number
+          category?: string | null
+          income_date: string
+          status?: string
+          performed_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          user_id?: string
+          title?: string
+          description?: string | null
+          amount?: number
+          category?: string | null
+          income_date?: string
+          status?: string
+          performed_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
       balances: {
         Row: {
           id: string
@@ -93,6 +137,8 @@ export type Database = {
           amount: number
           description: string | null
           created_by: string
+          performed_by: string
+          balance_date: string
           created_at: string
           updated_at: string
         }
@@ -102,6 +148,8 @@ export type Database = {
           amount: number
           description?: string | null
           created_by: string
+          performed_by: string
+          balance_date?: string
           created_at?: string
           updated_at?: string
         }
@@ -111,6 +159,8 @@ export type Database = {
           amount?: number
           description?: string | null
           created_by?: string
+          performed_by?: string
+          balance_date?: string
           created_at?: string
           updated_at?: string
         }
@@ -123,6 +173,7 @@ export type Database = {
           description: string
           category: string | null
           created_by: string
+          performed_by: string
           created_at: string
           updated_at: string
         }
@@ -133,6 +184,7 @@ export type Database = {
           description: string
           category?: string | null
           created_by: string
+          performed_by: string
           created_at?: string
           updated_at?: string
         }
@@ -143,6 +195,7 @@ export type Database = {
           description?: string
           category?: string | null
           created_by?: string
+          performed_by?: string
           created_at?: string
           updated_at?: string
         }

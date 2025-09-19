@@ -16,32 +16,52 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Obtener los parámetros de la URL
-        const code = searchParams.get('code')
-        const error = searchParams.get('error')
-        const errorDescription = searchParams.get('error_description')
+        console.log('🔍 Iniciando proceso de callback...')
+        
+        // Obtener parámetros de la URL (query params)
+        let code = searchParams.get('code')
+        let error = searchParams.get('error')
+        let errorDescription = searchParams.get('error_description')
+
+        // Si no hay parámetros en query, revisar en hash fragment
+        if (!code && !error && typeof window !== 'undefined') {
+          const hash = window.location.hash.substring(1) // Remover el #
+          const hashParams = new URLSearchParams(hash)
+          
+          code = hashParams.get('code')
+          error = hashParams.get('error')
+          errorDescription = hashParams.get('error_description')
+          
+          console.log('📊 Parámetros encontrados:', { code: !!code, error, errorDescription })
+        }
 
         if (error) {
+          console.error('❌ Error en callback:', { error, errorDescription })
           setStatus('error')
           setMessage(errorDescription || 'Error en la autenticación')
           return
         }
 
         if (!code) {
+          console.error('❌ No se encontró código de confirmación')
           setStatus('error')
-          setMessage('Código de confirmación no encontrado')
+          setMessage('Código de confirmación no encontrado en la URL')
           return
         }
+
+        console.log('✅ Código encontrado, intercambiando por sesión...')
 
         // Intercambiar el código por una sesión
         const { error: exchangeError } = await auth.exchangeCodeForSession(code)
 
         if (exchangeError) {
+          console.error('❌ Error al intercambiar código:', exchangeError)
           setStatus('error')
           setMessage(exchangeError.message || 'Error al confirmar el correo electrónico')
           return
         }
 
+        console.log('🎉 Email confirmado exitosamente!')
         setStatus('success')
         setMessage('¡Correo electrónico confirmado exitosamente!')
 
@@ -51,7 +71,7 @@ export default function AuthCallbackPage() {
         }, 3000)
 
       } catch (error) {
-        console.error('Error in auth callback:', error)
+        console.error('🚨 Error inesperado en callback:', error)
         setStatus('error')
         setMessage('Error inesperado al procesar la confirmación')
       }

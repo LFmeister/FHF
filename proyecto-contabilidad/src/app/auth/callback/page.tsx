@@ -10,6 +10,8 @@ import { auth } from '@/lib/auth'
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
+  const [isResending, setIsResending] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -38,7 +40,15 @@ export default function AuthCallbackPage() {
         if (error) {
           console.error('❌ Error en callback:', { error, errorDescription })
           setStatus('error')
-          setMessage(errorDescription || 'Error en la autenticación')
+          
+          // Manejar diferentes tipos de errores
+          if (error === 'access_denied' && errorDescription?.includes('expired')) {
+            setMessage('El enlace de confirmación ha expirado. Puedes solicitar un nuevo enlace.')
+          } else if (error === 'access_denied' && errorDescription?.includes('invalid')) {
+            setMessage('El enlace de confirmación es inválido. Verifica que hayas copiado la URL completa.')
+          } else {
+            setMessage(errorDescription || 'Error en la autenticación')
+          }
           return
         }
 
@@ -86,6 +96,31 @@ export default function AuthCallbackPage() {
 
   const handleGoToLogin = () => {
     router.push('/auth/login')
+  }
+
+  const handleResendEmail = async () => {
+    if (!userEmail) {
+      // Si no tenemos el email, redirigir al registro
+      router.push('/auth/register')
+      return
+    }
+
+    setIsResending(true)
+    try {
+      const { error } = await auth.resendConfirmation(userEmail)
+      
+      if (error) {
+        console.error('Error reenviando email:', error)
+        setMessage('Error al reenviar el email. Intenta registrarte nuevamente.')
+      } else {
+        setMessage('¡Email de confirmación reenviado! Revisa tu bandeja de entrada.')
+      }
+    } catch (error) {
+      console.error('Error inesperado:', error)
+      setMessage('Error inesperado. Intenta más tarde.')
+    } finally {
+      setIsResending(false)
+    }
   }
 
   return (
@@ -140,11 +175,25 @@ export default function AuthCallbackPage() {
                 <div className="text-sm text-red-700 bg-red-50 p-3 rounded-lg">
                   <p className="font-medium mb-1">¿Qué puedes hacer?</p>
                   <ul className="text-left space-y-1">
+                    {message.includes('expirado') && (
+                      <li>• Solicita un nuevo enlace de confirmación</li>
+                    )}
                     <li>• Verifica que el enlace esté completo</li>
                     <li>• Intenta registrarte nuevamente</li>
                     <li>• Contacta al soporte si el problema persiste</li>
                   </ul>
                 </div>
+                
+                {message.includes('expirado') && (
+                  <Button 
+                    onClick={handleResendEmail}
+                    loading={isResending}
+                    className="w-full mb-2"
+                  >
+                    {isResending ? 'Reenviando...' : 'Reenviar Email de Confirmación'}
+                  </Button>
+                )}
+                
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button 
                     variant="outline"
@@ -157,7 +206,7 @@ export default function AuthCallbackPage() {
                     onClick={() => router.push('/auth/register')}
                     className="flex-1"
                   >
-                    Registrarse
+                    Registrarse Nuevamente
                   </Button>
                 </div>
               </div>

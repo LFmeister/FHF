@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { LogOut, Settings, User, FolderOpen, Home } from 'lucide-react'
+import { LogOut, Settings, User, FolderOpen, Home, Crown, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { AccountSettingsModal } from '@/components/account/AccountSettingsModal'
 import { auth } from '@/lib/auth'
+import { adminService } from '@/lib/admin'
 
 export default function DashboardLayout({
   children,
@@ -15,6 +16,7 @@ export default function DashboardLayout({
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
+  const [isMaster, setIsMaster] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   
@@ -28,16 +30,36 @@ export default function DashboardLayout({
         return
       }
       setUser(user)
+      
+      // Verificar si el usuario es master
+      try {
+        const masterStatus = await adminService.isMaster(user.id)
+        setIsMaster(masterStatus)
+      } catch (error) {
+        console.error('Error checking master status:', error)
+        setIsMaster(false)
+      }
+      
       setLoading(false)
     }
 
     checkUser()
 
-    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         router.push('/auth/login')
       } else if (session?.user) {
         setUser(session.user)
+        
+        // Verificar si el usuario es master cuando cambia la sesión
+        try {
+          const masterStatus = await adminService.isMaster(session.user.id)
+          setIsMaster(masterStatus)
+        } catch (error) {
+          console.error('Error checking master status:', error)
+          setIsMaster(false)
+        }
+        
         setLoading(false)
       }
     })
@@ -87,11 +109,49 @@ export default function DashboardLayout({
               {user && (
                 <>
                   <div className="text-right hidden sm:block">
-                    <p className="text-sm font-medium text-primary-800">
-                      {user.user_metadata?.full_name || user.email}
-                    </p>
-                    <p className="text-xs text-primary-500">{user.email}</p>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-primary-800">
+                          {user.user_metadata?.full_name || user.email}
+                        </p>
+                        <p className="text-xs text-primary-500">{user.email}</p>
+                      </div>
+                      {isMaster && (
+                        <div className="flex items-center gap-1" title="Usuario Master">
+                          <Crown className="h-4 w-4 text-yellow-600" />
+                          <span className="text-xs font-medium text-yellow-600">Master</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  
+                  {/* Enlace de administración para usuarios master */}
+                  {isMaster && (
+                    <>
+                      {/* Versión desktop */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/admin')}
+                        className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 border border-yellow-200 hidden sm:flex"
+                        title="Panel de Administración Master"
+                      >
+                        <Shield className="h-4 w-4 mr-2" />
+                        Admin
+                      </Button>
+                      
+                      {/* Versión móvil */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/admin')}
+                        className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 border border-yellow-200 sm:hidden"
+                        title="Panel Master"
+                      >
+                        <Crown className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                   {isProjectPage && (
                     <Button
                       variant="ghost"

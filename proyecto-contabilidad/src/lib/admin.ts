@@ -95,17 +95,22 @@ export const adminService = {
         return false
       }
 
-      // Si se proporciona un userId específico, verificar ese usuario
-      if (userId && userId !== user.id) {
-        const { data: users, error: listError } = await supabase.auth.admin.listUsers()
-        if (listError) return false
-        
-        const targetUser = users.users.find(u => u.id === userId)
-        return targetUser?.user_metadata?.type === 'master'
+      // ID del usuario a verificar (el proporcionado o el actual)
+      const targetUserId = userId || user.id
+
+      // Verificar en la tabla user_profiles
+      const { data, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('user_type')
+        .eq('id', targetUserId)
+        .single()
+
+      if (profileError) {
+        console.error('Error checking user profile:', profileError)
+        return false
       }
 
-      // Verificar si el usuario actual es master
-      return user.user_metadata?.type === 'master'
+      return data?.user_type === 'master'
     } catch (error) {
       console.error('Error checking master status:', error)
       return false
@@ -121,15 +126,19 @@ export const adminService = {
         throw new Error('Solo usuarios master pueden cambiar tipos de usuario')
       }
 
-      const { data, error } = await supabase.auth.admin.updateUserById(userId, {
-        user_metadata: { type }
-      })
+      // Actualizar en la tabla user_profiles
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update({ user_type: type, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select()
+        .single()
 
       if (error) {
         throw new Error(`Error updating user type: ${error.message}`)
       }
 
-      return { success: true, user: data.user }
+      return { success: true, user: data }
     } catch (error) {
       console.error('Error in updateUserType:', error)
       throw error

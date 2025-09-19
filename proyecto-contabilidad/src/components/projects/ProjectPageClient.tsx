@@ -160,8 +160,8 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6">
         <div className="flex items-center gap-3 mb-4">
           <Button
             variant="ghost"
@@ -174,21 +174,21 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
           </Button>
         </div>
 
-        <div className="mb-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-3xl font-bold text-primary-800 mb-2">{project.name}</h1>
+        <div className="mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary-800 mb-2 break-words">{project.name}</h1>
               {project.description && (
-                <p className="text-primary-600 mb-3">{project.description}</p>
+                <p className="text-primary-600 mb-3 text-sm sm:text-base">{project.description}</p>
               )}
-              <div className="flex flex-wrap items-center gap-4 text-sm text-primary-500">
-                <span>
-                  Código: <span className="font-mono bg-primary-100 px-2 py-1 rounded">{project.invite_code}</span>
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-primary-500">
+                <span className="flex items-center">
+                  Código: <span className="font-mono bg-primary-100 px-2 py-1 rounded ml-1 text-xs">{project.invite_code}</span>
                 </span>
                 <span>
                   Moneda: <span className="font-semibold">{project?.currency || 'COP'}</span>
                 </span>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${permissions.getRoleColor(userRole)}`}>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${permissions.getRoleColor(userRole)} w-fit`}>
                   Tu rol: {permissions.getRoleDisplayName(userRole)}
                 </span>
               </div>
@@ -200,7 +200,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         </div>
 
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 overflow-x-auto">
+          <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => handleTabChange('overview')}
               className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
@@ -283,7 +283,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
 
       {/* Mostrar las tarjetas de resumen en todas las pestañas EXCEPTO en Inventario */}
       {activeTab !== 'inventory' && (
-        <div className={`grid gap-6 mb-6 ${userRole === 'view' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
+        <div className={`grid gap-4 sm:gap-6 mb-4 sm:mb-6 ${userRole === 'view' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
@@ -347,12 +347,12 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               />
             )}
 
-            <div className={`grid gap-6 ${userRole === 'view' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
+            <div className={`grid gap-4 sm:gap-6 ${userRole === 'view' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
               <IncomeChart income={income} totalIncome={totalIncome} />
               <ExpenseChart expenses={expenses} totalExpenses={totalExpenses} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

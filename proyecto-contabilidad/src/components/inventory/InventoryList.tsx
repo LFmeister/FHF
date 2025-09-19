@@ -179,8 +179,8 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
           <CardDescription>Tabla por producto y cantidades por estado</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm border">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="min-w-full text-xs sm:text-sm border">
               <thead>
                 <tr className="bg-gray-50 text-gray-700">
                   <th className="text-center p-2 border">Producto</th>
@@ -227,10 +227,10 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
       <div className="space-y-4">
         {items.map(item => (
           <Card key={item.id}>
-            <CardContent className="pt-6">
-              <div className="flex gap-4">
+            <CardContent className="pt-4 sm:pt-6">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <div 
-                  className={`w-20 h-20 rounded-md border bg-gray-50 flex items-center justify-center overflow-hidden transition-colors ${
+                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-md border bg-gray-50 flex items-center justify-center overflow-hidden transition-colors flex-shrink-0 ${
                     getThumbUrl(item) ? 'cursor-pointer hover:border-gray-300' : ''
                   }`}
                   onClick={() => getThumbUrl(item) && openImageModal(item)}
@@ -240,11 +240,11 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={getThumbUrl(item)} alt={item.name} className="w-full h-full object-cover" />
                   ) : (
-                    <ImageIcon className="h-8 w-8 text-gray-400" />
+                    <ImageIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
                     <div>
                       <p className="font-semibold text-gray-900">{item.name}</p>
                       {item.description && (
@@ -256,12 +256,14 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                         <span><strong>Gastado:</strong> {item.qty_gastado}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setMovementsOpen(prev => ({ ...prev, [item.id]: !prev[item.id] }))}>
-                        {movementsOpen[item.id] ? 'Ocultar movimientos' : 'Movimientos'}
+                        <span className="hidden sm:inline">{movementsOpen[item.id] ? 'Ocultar movimientos' : 'Movimientos'}</span>
+                        <span className="sm:hidden text-xs">{movementsOpen[item.id] ? 'Ocultar' : 'Movimientos'}</span>
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => triggerReplaceImage(item.id)} disabled={uploadingFor === item.id}>
-                        <Upload className="h-4 w-4 mr-1" /> {uploadingFor === item.id ? 'Subiendo...' : 'Reemplazar imagen'}
+                        <Upload className="h-4 w-4 sm:mr-1" /> 
+                        <span className="hidden sm:inline">{uploadingFor === item.id ? 'Subiendo...' : 'Reemplazar imagen'}</span>
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setExpanded(prev => ({ ...prev, [item.id]: !prev[item.id] }))}>
                         <ChevronDown className={`h-4 w-4 transition-transform ${expanded[item.id] ? 'rotate-180' : ''}`} />
@@ -281,7 +283,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
 
                   {/* Movements (toggle) */}
                   {movementsOpen[item.id] && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
                       <div className="p-3 rounded-lg border bg-gray-50">
                         <p className="text-xs font-medium text-gray-600 mb-2">Ingresar a bodega</p>
                         <div className="flex gap-2">
@@ -308,7 +310,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
 
                   {/* Files Preview */}
                   {expanded[item.id] && (
-                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                       {item.files?.map(file => (
                         <div key={file.id} className="border rounded-md overflow-hidden bg-white">
                           {/* eslint-disable-next-line @next/next/no-img-element */}

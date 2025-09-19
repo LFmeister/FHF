@@ -56,17 +56,17 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
       {income.map((item) => (
         <Card key={item.id} className="hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="flex-1 min-w-0">
                 <CardTitle className="text-lg text-green-700 mb-1">
                   {formatCurrency(item.amount)}
                 </CardTitle>
-                <h4 className="font-semibold text-gray-900">{item.category || 'Sin categoría'}</h4>
+                <h4 className="font-semibold text-gray-900 break-words">{item.category || 'Sin categoría'}</h4>
                 {item.description && (
-                  <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                  <p className="text-sm text-gray-600 mt-1 break-words">{item.description}</p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {(permissions.canDelete(userRole) || (item.user_id === currentUserId && permissions.canEdit(userRole))) && (
                   <Button
                     variant="ghost"

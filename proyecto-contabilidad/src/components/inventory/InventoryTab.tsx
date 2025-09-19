@@ -76,14 +76,14 @@ export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-lg font-medium flex items-center gap-2">
           <Boxes className="h-5 w-5" /> Inventario
         </h2>
         
-        <div className="flex items-center gap-4 flex-1 justify-end">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 sm:flex-1 sm:justify-end">
           {/* Buscador */}
-          <div ref={searchRef} className="relative w-full max-w-xs">
+          <div ref={searchRef} className="relative w-full sm:max-w-xs">
             <Input
               placeholder="Buscar producto..."
               value={searchQuery}
@@ -106,18 +106,21 @@ export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
             )}
           </div>
           
-          {searchQuery && (
-            <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(''); setShowSuggestions(false) }}>
-              Limpiar
-            </Button>
-          )}
-          
-          {permissions.canEdit(userRole) && (
-            <Button onClick={() => setShowAdd(!showAdd)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {showAdd ? 'Cancelar' : 'Agregar Producto'}
-            </Button>
-          )}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {searchQuery && (
+              <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(''); setShowSuggestions(false) }}>
+                Limpiar
+              </Button>
+            )}
+            
+            {permissions.canEdit(userRole) && (
+              <Button onClick={() => setShowAdd(!showAdd)} className="whitespace-nowrap">
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">{showAdd ? 'Cancelar' : 'Agregar Producto'}</span>
+                <span className="sm:hidden">{showAdd ? 'Cancelar' : 'Agregar'}</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

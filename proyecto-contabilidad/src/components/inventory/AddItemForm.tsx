@@ -84,7 +84,7 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
           )}
 
           {/* Nombre, Cantidad a Bodega e Imagen en una fila */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label htmlFor="name" className="text-sm font-medium text-center block">Nombre *</label>
               <Input id="name" {...register('name')} error={errors.name?.message} className="text-center" />

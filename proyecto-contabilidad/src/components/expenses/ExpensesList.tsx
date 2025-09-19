@@ -175,43 +175,57 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
                 key={expense.id}
                 className="border rounded-lg p-4 hover:bg-gray-50"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="text-lg font-semibold text-red-600">
-                        {formatCurrency(expense.amount)}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg text-red-700 mb-1">
+                      {formatCurrency(expense.amount)}
+                    </CardTitle>
+                    <h4 className="font-semibold text-gray-900 break-words">{expense.category}</h4>
+                    <p className="text-sm text-gray-600 mt-1 break-words">{expense.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {(permissions.canDelete(userRole) || (expense.created_by === currentUserId && permissions.canEdit(userRole))) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(expense.id)}
+                        disabled={deletingId === expense.id}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{formatDate(expense.created_at)}</span>
+                    </div>
+                    {expense.category && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                        <Tag className="h-3 w-3" />
+                        {expense.category}
                       </div>
-                      {expense.category && (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                          <Tag className="h-3 w-3" />
-                          {expense.category}
-                        </div>
-                      )}
-                      {expense.expense_files && expense.expense_files.length > 0 && (
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <Paperclip className="h-4 w-4" />
-                          <span className="text-xs">{expense.expense_files.length}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <p className="text-sm text-gray-700 mb-2">{expense.description}</p>
-                    
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{formatDate(expense.created_at)}</span>
+                    )}
+                    {expense.expense_files && expense.expense_files.length > 0 && (
+                      <div className="flex items-center gap-1 text-gray-500">
+                        <Paperclip className="h-4 w-4" />
+                        <span className="text-xs">{expense.expense_files.length}</span>
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mt-2">
-                      <span>
-                        <strong>Realizado por:</strong> {expense.performed_user?.full_name || expense.performed_user?.email || (expense.performed_by === currentUserId ? 'Tú' : 'Usuario desconocido')}
-                      </span>
-                      <span>
-                        <strong>Registrado por:</strong> {expense.user?.full_name || expense.user?.email || 'Usuario desconocido'}
-                      </span>
-                    </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                    <span>
+                      <strong>Realizado por:</strong> {expense.performed_user?.full_name || expense.performed_user?.email || (expense.performed_by === currentUserId ? 'Tú' : 'Usuario desconocido')}
+                    </span>
+                    <span>
+                      <strong>Registrado por:</strong> {expense.user?.full_name || expense.user?.email || 'Usuario desconocido'}
+                    </span>
+                  </div>
 
                     {/* Files Section */}
                     <div className="mt-3">
@@ -294,28 +308,27 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
-                              </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-
-                  {(permissions.canDelete(userRole) || (expense.created_by === currentUserId && permissions.canEdit(userRole))) && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(expense.id)}
-                        disabled={deletingId === expense.id}
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
                 </div>
+
+                {(permissions.canDelete(userRole) || (expense.created_by === currentUserId && permissions.canEdit(userRole))) && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(expense.id)}
+                      disabled={deletingId === expense.id}
+                      className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

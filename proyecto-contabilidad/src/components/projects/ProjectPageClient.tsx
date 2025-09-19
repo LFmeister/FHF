@@ -200,87 +200,81 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         </div>
 
         <div className="border-b border-gray-200 overflow-hidden">
-          <nav className="-mb-px flex space-x-2 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide px-1">
+          <nav className="-mb-px flex space-x-1 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide px-2 sm:px-4 project-tabs">
             <button
               onClick={() => handleTabChange('overview')}
-              className={`py-3 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
+              className={`py-3 px-1 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
                 activeTab === 'overview'
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <BarChart3 className="h-4 w-4 inline mr-1 sm:mr-2" />
+              <BarChart3 className="h-4 w-4 inline sm:mr-2" />
               <span className="hidden sm:inline">Resumen</span>
-              <span className="sm:hidden">Inicio</span>
             </button>
             {permissions.canEdit(userRole) && (
               <button
                 onClick={() => handleTabChange('income')}
-                className={`py-3 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
+                className={`py-3 px-1 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'income'
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <TrendingUp className="h-4 w-4 inline mr-1 sm:mr-2" />
+                <TrendingUp className="h-4 w-4 inline sm:mr-2" />
                 <span className="hidden sm:inline">Ingresos ({income.length})</span>
-                <span className="sm:hidden">Ingresos</span>
               </button>
             )}
             {permissions.canEdit(userRole) && (
               <button
                 onClick={() => handleTabChange('expenses')}
-                className={`py-3 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
+                className={`py-3 px-1 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'expenses'
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Receipt className="h-4 w-4 inline mr-1 sm:mr-2" />
+                <Receipt className="h-4 w-4 inline sm:mr-2" />
                 <span className="hidden sm:inline">Gastos ({expenses.length})</span>
-                <span className="sm:hidden">Gastos</span>
               </button>
             )}
             {permissions.canEdit(userRole) && (
               <button
                 onClick={() => handleTabChange('inventory')}
-                className={`py-3 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
+                className={`py-3 px-1 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'inventory'
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Boxes className="h-4 w-4 inline mr-1 sm:mr-2" />
+                <Boxes className="h-4 w-4 inline sm:mr-2" />
                 <span className="hidden sm:inline">Inventario</span>
-                <span className="sm:hidden">Stock</span>
               </button>
             )}
             {permissions.canManageMembers(userRole) && (
               <button
                 onClick={() => handleTabChange('members')}
-                className={`py-3 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
+                className={`py-3 px-1 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'members'
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Users className="h-4 w-4 inline mr-1 sm:mr-2" />
+                <Users className="h-4 w-4 inline sm:mr-2" />
                 <span className="hidden sm:inline">Miembros</span>
-                <span className="sm:hidden">Equipo</span>
               </button>
             )}
             {permissions.canManageProject(userRole) && (
               <button
                 onClick={() => handleTabChange('settings')}
-                className={`py-3 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
+                className={`py-3 px-1 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'settings'
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Settings className="h-4 w-4 inline mr-1 sm:mr-2" />
+                <Settings className="h-4 w-4 inline sm:mr-2" />
                 <span className="hidden sm:inline">Configuración</span>
-                <span className="sm:hidden">Config</span>
               </button>
             )}
           </nav>

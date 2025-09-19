@@ -61,7 +61,7 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
                 <CardTitle className="text-lg text-green-700 mb-1">
                   {formatCurrency(item.amount)}
                 </CardTitle>
-                <h4 className="font-semibold text-gray-900">{item.title}</h4>
+                <h4 className="font-semibold text-gray-900">{item.category || 'Sin categoría'}</h4>
                 {item.description && (
                   <p className="text-sm text-gray-600 mt-1">{item.description}</p>
                 )}

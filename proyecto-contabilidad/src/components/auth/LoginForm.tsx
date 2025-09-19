@@ -34,11 +34,26 @@ export function LoginForm() {
       const { data: authData, error: authError } = await auth.signIn(data.email, data.password)
 
       if (authError) {
-        setError(authError.message)
+        // Verificar si es un error de email no confirmado
+        if (authError.message.includes('Email not confirmed') || 
+            authError.message.includes('email_not_confirmed')) {
+          setError('Debes confirmar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.')
+        } else {
+          setError(authError.message)
+        }
         return
       }
 
       if (authData.user) {
+        // Verificar si el email está confirmado
+        const isEmailConfirmed = await auth.isEmailConfirmed()
+        
+        if (!isEmailConfirmed) {
+          setError('Debes confirmar tu correo electrónico antes de acceder. Revisa tu bandeja de entrada.')
+          await auth.signOut() // Cerrar sesión si el email no está confirmado
+          return
+        }
+
         router.push('/dashboard')
       }
     } catch (err) {

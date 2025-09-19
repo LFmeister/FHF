@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { CreateProjectForm } from '@/components/projects/CreateProjectForm'
 import { JoinProjectForm } from '@/components/projects/JoinProjectForm'
 import { ProjectCard } from '@/components/projects/ProjectCard'
+import { AuthGuard } from '@/components/auth/AuthGuard'
 import { projectsService } from '@/lib/projects'
 import { auth } from '@/lib/auth'
 
@@ -63,7 +64,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <AuthGuard requireEmailConfirmation={true}>
+      <div className="space-y-8">
       {/* Header */}
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <div className="sm:flex sm:items-center sm:justify-between">
@@ -148,6 +150,7 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </AuthGuard>
   )
 }

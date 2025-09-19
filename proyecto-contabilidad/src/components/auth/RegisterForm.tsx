@@ -57,17 +57,25 @@ export function RegisterForm() {
 
   if (success) {
     return (
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="w-full max-w-md mx-auto shadow-xl border-0">
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold">¡Registro Exitoso!</h2>
-            <p className="text-muted-foreground">
-              Revisa tu email para confirmar tu cuenta. Serás redirigido al login en unos segundos.
+            <h2 className="text-xl font-semibold text-primary-800">¡Registro Exitoso!</h2>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-yellow-800 mb-2">
+                📧 Confirma tu correo electrónico
+              </p>
+              <p className="text-sm text-yellow-700">
+                Te hemos enviado un enlace de confirmación. Debes hacer clic en él antes de poder iniciar sesión.
+              </p>
+            </div>
+            <p className="text-sm text-gray-600">
+              Serás redirigido al login en unos segundos.
             </p>
           </div>
         </CardContent>

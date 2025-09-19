@@ -76,6 +76,24 @@ export const auth = {
     return { user, error }
   },
 
+  // Check if user email is confirmed
+  async isEmailConfirmed() {
+    const { data: { user } } = await supabase.auth.getUser()
+    return user?.email_confirmed_at !== null
+  },
+
+  // Resend confirmation email
+  async resendConfirmation(email: string) {
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/FHF/auth/callback`,
+      }
+    })
+    return { data, error }
+  },
+
   // Get session
   async getSession() {
     const { data: { session }, error } = await supabase.auth.getSession()

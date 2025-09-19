@@ -15,7 +15,7 @@ export const auth = {
         data: {
           full_name: fullName,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/FHF/auth/callback`,
       },
     })
     return { data, error }

@@ -15,6 +15,7 @@ export const auth = {
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
     return { data, error }
@@ -79,6 +80,12 @@ export const auth = {
   async getSession() {
     const { data: { session }, error } = await supabase.auth.getSession()
     return { session, error }
+  },
+
+  // Exchange code for session (for email confirmation)
+  async exchangeCodeForSession(code: string) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    return { data, error }
   },
 
   // Listen to auth changes

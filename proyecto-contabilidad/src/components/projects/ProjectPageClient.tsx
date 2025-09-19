@@ -13,6 +13,7 @@ import { InventoryTab } from '@/components/inventory/InventoryTab'
 import { AccountSettingsModal } from '@/components/account/AccountSettingsModal'
 import { ExpenseChart } from '@/components/charts/ExpenseChart'
 import { IncomeChart } from '@/components/charts/IncomeChart'
+import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
 import { projectsService } from '@/lib/projects'
 import { incomeService, type Income } from '@/lib/income'
 import { expensesService, type Expense } from '@/lib/expenses'
@@ -33,7 +34,10 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
   const [income, setIncome] = useState<Income[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [user, setUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<UserRole>('view')
+  const [deletingProject, setDeletingProject] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(initialTab || 'overview')
   const [showAddIncome, setShowAddIncome] = useState(false)
@@ -56,6 +60,30 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     }
     setShowAddIncome(false)
     setShowAddExpense(false)
+  }
+
+  const handleDeleteProject = () => {
+    if (!permissions.canManageProject(userRole)) {
+      alert('No tienes permisos para eliminar este proyecto')
+      return
+    }
+    setShowDeleteModal(true)
+  }
+
+  const confirmDeleteProject = async () => {
+    setDeletingProject(true)
+    
+    try {
+      await projectsService.deleteProject(projectId)
+      setShowDeleteModal(false)
+      alert('Proyecto eliminado exitosamente')
+      router.push('/dashboard')
+    } catch (error) {
+      console.error('Error al eliminar proyecto:', error)
+      alert('Error al eliminar el proyecto. Por favor, intenta de nuevo.')
+    } finally {
+      setDeletingProject(false)
+    }
   }
 
   useEffect(() => {
@@ -583,13 +611,11 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                     <Button 
                       variant="danger" 
                       size="sm"
-                      onClick={() => {
-                        if (confirm('¿Estás seguro de que quieres eliminar este proyecto? Esta acción no se puede deshacer.')) {
-                          alert('Función pendiente: Eliminar proyecto')
-                        }
-                      }}
+                      onClick={handleDeleteProject}
+                      loading={deletingProject}
+                      disabled={deletingProject}
                     >
-                      Eliminar Proyecto
+                      {deletingProject ? 'Eliminando...' : 'Eliminar Proyecto'}
                     </Button>
                   </div>
                 </div>
@@ -602,8 +628,22 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         isOpen={showAccountSettings}
         onClose={() => setShowAccountSettings(false)}
         currentEmail={user?.email || ''}
-        currentFullName={(user?.user_metadata as any)?.full_name || ''}
-        onUpdated={refreshUser}
+        currentFullName={user?.user_metadata?.full_name || ''}
+        onUpdated={() => {
+          // Refresh user data after update
+          auth.getCurrentUser().then(({ user }) => {
+            if (user) setUser(user)
+          })
+        }}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDeleteProject}
+        title="Eliminar Proyecto"
+        projectName={project?.name || ''}
+        loading={deletingProject}
       />
     </div>
   )

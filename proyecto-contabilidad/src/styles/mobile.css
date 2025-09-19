@@ -40,6 +40,24 @@
     font-size: 16px; /* Previene zoom en iOS */
   }
   
+  /* Optimizaciones específicas para páginas de auth */
+  .auth-page {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Mejorar inputs en formularios de auth */
+  .auth-input {
+    min-height: 48px;
+    font-size: 16px;
+  }
+  
+  /* Botones más grandes en móviles */
+  .auth-button {
+    min-height: 48px;
+    font-size: 16px;
+  }
+  
   /* Mejorar tablas en móviles */
   table {
     font-size: 14px;

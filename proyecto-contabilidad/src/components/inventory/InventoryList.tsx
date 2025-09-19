@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useMemo, useState } from 'react'
 import { Upload, Image as ImageIcon, ChevronDown, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { inventoryService, type InventoryItem, type InventoryFile } from '@/lib/inventory'
+import { ImageModal } from './ImageModal'
 
 interface InventoryItemWithQty extends InventoryItem {
   files?: InventoryFile[]
@@ -26,9 +27,17 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
   const [qtyInputs, setQtyInputs] = useState<Record<string, { add: string; toUse: string; toSpent: string }>>({})
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [movementsOpen, setMovementsOpen] = useState<Record<string, boolean>>({})
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const searchRef = useRef<HTMLDivElement>(null)
+  const [imageModal, setImageModal] = useState<{
+    isOpen: boolean
+    imageUrl: string
+    itemName: string
+    itemId: string
+  }>({
+    isOpen: false,
+    imageUrl: '',
+    itemName: '',
+    itemId: ''
+  })
 
   const totalByState = useMemo(() => {
     return items.reduce(
@@ -42,29 +51,6 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
     )
   }, [items])
 
-  const suggestions = useMemo(() => {
-    const names = Array.from(new Set(items.map(i => i.name)))
-    if (!searchQuery) return names.slice(0, 8)
-    const q = searchQuery.toLowerCase()
-    return names.filter(n => n.toLowerCase().includes(q)).slice(0, 8)
-  }, [items, searchQuery])
-
-  const filteredItems = useMemo(() => {
-    if (!searchQuery) return items
-    const q = searchQuery.toLowerCase()
-    return items.filter(i => i.name.toLowerCase().includes(q))
-  }, [items, searchQuery])
-
-  // Close suggestions when clicking outside the search container
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
 
   const triggerReplaceImage = (itemId: string) => {
     const input = document.createElement('input')
@@ -103,6 +89,27 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
     const firstImage = item.files?.find(f => (f.file_type || '').startsWith('image/'))
     if (firstImage) return inventoryService.getFileUrl(firstImage.file_path)
     return ''
+  }
+
+  const openImageModal = (item: InventoryItemWithQty) => {
+    const imageUrl = getThumbUrl(item)
+    if (imageUrl) {
+      setImageModal({
+        isOpen: true,
+        imageUrl,
+        itemName: item.name,
+        itemId: item.id
+      })
+    }
+  }
+
+  const closeImageModal = () => {
+    setImageModal({
+      isOpen: false,
+      imageUrl: '',
+      itemName: '',
+      itemId: ''
+    })
   }
 
   const ensureQtyState = (id: string) => {
@@ -176,11 +183,11 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
             <table className="min-w-full text-sm border">
               <thead>
                 <tr className="bg-gray-50 text-gray-700">
-                  <th className="text-left p-2 border">Producto</th>
-                  <th className="text-right p-2 border">En bodega</th>
-                  <th className="text-right p-2 border">En uso</th>
-                  <th className="text-right p-2 border">Gastado</th>
-                  <th className="text-right p-2 border">Total</th>
+                  <th className="text-center p-2 border">Producto</th>
+                  <th className="text-center p-2 border">En bodega</th>
+                  <th className="text-center p-2 border">En uso</th>
+                  <th className="text-center p-2 border">Gastado</th>
+                  <th className="text-center p-2 border">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -188,11 +195,11 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                   const total = item.qty_bodega + item.qty_uso + item.qty_gastado
                   return (
                     <tr key={`sum-${item.id}`} className="odd:bg-white even:bg-gray-50">
-                      <td className="p-2 border">{item.name}</td>
-                      <td className="p-2 border text-right">{item.qty_bodega}</td>
-                      <td className="p-2 border text-right">{item.qty_uso}</td>
-                      <td className="p-2 border text-right">{item.qty_gastado}</td>
-                      <td className="p-2 border text-right font-medium">{total}</td>
+                      <td className="p-2 border text-center">{item.name}</td>
+                      <td className="p-2 border text-center">{item.qty_bodega}</td>
+                      <td className="p-2 border text-center">{item.qty_uso}</td>
+                      <td className="p-2 border text-center">{item.qty_gastado}</td>
+                      <td className="p-2 border text-center font-medium">{total}</td>
                     </tr>
                   )
                 })}
@@ -204,11 +211,11 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
               </tbody>
               <tfoot>
                 <tr className="bg-gray-100 font-semibold">
-                  <td className="p-2 border text-right">Totales</td>
-                  <td className="p-2 border text-right">{totalByState.bodega}</td>
-                  <td className="p-2 border text-right">{totalByState.uso}</td>
-                  <td className="p-2 border text-right">{totalByState.gastado}</td>
-                  <td className="p-2 border text-right">{totalByState.bodega + totalByState.uso + totalByState.gastado}</td>
+                  <td className="p-2 border text-center">Totales</td>
+                  <td className="p-2 border text-center">{totalByState.bodega}</td>
+                  <td className="p-2 border text-center">{totalByState.uso}</td>
+                  <td className="p-2 border text-center">{totalByState.gastado}</td>
+                  <td className="p-2 border text-center">{totalByState.bodega + totalByState.uso + totalByState.gastado}</td>
                 </tr>
               </tfoot>
             </table>
@@ -216,51 +223,19 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
         </CardContent>
       </Card>
 
-      {/* Buscador con autocompletado */}
-      <Card className="w-full sm:max-w-md ml-auto">
-        <CardContent className="pt-6">
-          <div className="flex justify-end">
-            <div ref={searchRef} className="relative w-full">
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1">
-                  <Input
-                    placeholder="Buscar producto..."
-                    value={searchQuery}
-                    onChange={(e) => { setSearchQuery(e.target.value); setShowSuggestions(true) }}
-                    onFocus={() => setShowSuggestions(true)}
-                  />
-                  {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-white border rounded-md shadow">
-                      {suggestions.map((name) => (
-                        <button
-                          key={name}
-                          type="button"
-                          className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
-                          onMouseDown={() => { setSearchQuery(name); setShowSuggestions(false) }}
-                        >
-                          {name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {searchQuery && (
-                  <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(''); setShowSuggestions(false) }}>
-                    Limpiar
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="space-y-4">
-        {filteredItems.map(item => (
+        {items.map(item => (
           <Card key={item.id}>
             <CardContent className="pt-6">
               <div className="flex gap-4">
-                <div className="w-20 h-20 rounded-md border bg-gray-50 flex items-center justify-center overflow-hidden">
+                <div 
+                  className={`w-20 h-20 rounded-md border bg-gray-50 flex items-center justify-center overflow-hidden transition-colors ${
+                    getThumbUrl(item) ? 'cursor-pointer hover:border-gray-300' : ''
+                  }`}
+                  onClick={() => getThumbUrl(item) && openImageModal(item)}
+                  title={getThumbUrl(item) ? "Click para ver imagen completa" : "Sin imagen"}
+                >
                   {getThumbUrl(item) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={getThumbUrl(item)} alt={item.name} className="w-full h-full object-cover" />
@@ -358,6 +333,16 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
           </Card>
         ))}
       </div>
+
+      {/* Modal de imagen */}
+      <ImageModal
+        isOpen={imageModal.isOpen}
+        onClose={closeImageModal}
+        imageUrl={imageModal.imageUrl}
+        itemName={imageModal.itemName}
+        itemId={imageModal.itemId}
+        onImageUpdated={onUpdate}
+      />
     </div>
   )
 }

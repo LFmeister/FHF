@@ -47,11 +47,37 @@ export const balanceSchema = z.object({
   performed_by: z.string().min(1, 'El usuario que realizó la transacción es requerido'),
 })
 
+export const incomeSchema = z.object({
+  description: z.string().optional(),
+  amount: z.coerce.number().positive('El monto debe ser positivo'),
+  category: z.string().min(1, 'La categoría es requerida'),
+  income_date: z.string().min(1, 'La fecha es requerida'),
+  performed_by: z.string().min(1, 'El usuario que realizó la transacción es requerido'),
+}).refine((data) => {
+  if (data.category === 'Otros') {
+    return data.description && data.description.trim().length > 0
+  }
+  return true
+}, {
+  message: 'La descripción es requerida cuando la categoría es "Otros"',
+  path: ['description'],
+})
+
 export const expenseSchema = z.object({
   amount: z.coerce.number().positive('El monto debe ser positivo'),
-  description: z.string().min(1, 'La descripción es requerida'),
-  category: z.string().optional(),
+  description: z.string().optional(),
+  category: z.string().min(1, 'La categoría es requerida'),
+  expense_date: z.string().min(1, 'La fecha es requerida'),
   performed_by: z.string().min(1, 'El usuario que realizó la transacción es requerido'),
+}).refine((data) => {
+  if (data.category === 'Otros') {
+    return data.description && data.description.trim().length > 0
+  }
+  // Para otras categorías, la descripción sigue siendo requerida
+  return data.description && data.description.trim().length > 0
+}, {
+  message: 'La descripción es requerida',
+  path: ['description'],
 })
 
 export const joinProjectSchema = z.object({
@@ -61,6 +87,7 @@ export const joinProjectSchema = z.object({
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegisterFormData = z.infer<typeof registerSchema>
 export type BalanceFormData = z.infer<typeof balanceSchema>
+export type IncomeFormData = z.infer<typeof incomeSchema>
 export type ExpenseFormData = z.infer<typeof expenseSchema>
 export type JoinProjectFormData = z.infer<typeof joinProjectSchema>
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>

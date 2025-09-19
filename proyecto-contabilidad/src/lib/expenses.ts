@@ -6,6 +6,7 @@ export interface Expense {
   amount: number
   description: string
   category: string | null
+  expense_date: string
   created_by: string
   performed_by: string
   created_at: string
@@ -33,7 +34,7 @@ export interface ExpenseFile {
 
 export const expensesService = {
   // Create a new expense
-  async createExpense(projectId: string, expenseData: { amount: number; description: string; category?: string; performed_by?: string }) {
+  async createExpense(projectId: string, expenseData: { amount: number; description: string; category?: string; expense_date: string; performed_by?: string }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Usuario no autenticado')
 
@@ -44,6 +45,7 @@ export const expensesService = {
         amount: expenseData.amount,
         description: expenseData.description,
         category: expenseData.category,
+        expense_date: expenseData.expense_date,
         created_by: user.id, // Usuario que registra (sesión actual)
         performed_by: expenseData.performed_by || user.id, // Usuario que realizó la transacción
       })

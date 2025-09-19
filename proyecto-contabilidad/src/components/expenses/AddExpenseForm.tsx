@@ -65,9 +65,17 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
     setValue,
     control,
     getValues,
+    watch,
   } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
+    defaultValues: {
+      expense_date: new Date().toISOString().split('T')[0],
+    },
   })
+
+  // Watch category for dynamic description requirement
+  const selectedCategory = watch('category')
+  const [displayAmount, setDisplayAmount] = useState('')
 
   // Set current user as default when data loads
   useEffect(() => {
@@ -75,7 +83,32 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
     if (currentUser && (!currentVal || currentVal === '')) {
       setValue('performed_by', currentUser, { shouldValidate: true })
     }
+    // Always ensure today's date is set
+    setValue('expense_date', new Date().toISOString().split('T')[0])
   }, [currentUser, getValues, setValue])
+
+  // Format number with thousands separator
+  const formatNumber = (value: string) => {
+    // Remove all non-digits
+    const numbers = value.replace(/\D/g, '')
+    
+    // Add thousands separator (dot) for Colombian peso format
+    if (numbers.length > 3) {
+      return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+    }
+    return numbers
+  }
+
+  // Handle amount input change
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value
+    const formattedValue = formatNumber(inputValue)
+    setDisplayAmount(formattedValue)
+    
+    // Convert back to number for form validation
+    const numericValue = parseInt(formattedValue.replace(/\./g, '')) || 0
+    setValue('amount', numericValue, { shouldValidate: true })
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -98,8 +131,9 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
         projectId,
         {
           amount: Number(data.amount),
-          description: data.description,
+          description: data.description || '',
           category: data.category,
+          expense_date: data.expense_date,
           performed_by: data.performed_by
         }
       )
@@ -111,13 +145,15 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
           await expensesService.uploadExpenseFile(expense.id, file)
         }
       }
-
-      reset()
-      // Keep current user selected after reset
-      if (currentUser) {
-        setValue('performed_by', currentUser)
-      }
+      reset({
+        expense_date: new Date().toISOString().split('T')[0],
+      })
       setFiles([])
+      setDisplayAmount('')
+      // Keep current user as default after reset
+      if (currentUser) {
+        setValue('performed_by', currentUser, { shouldValidate: true })
+      }
       onSuccess?.()
     } catch (err: any) {
       setError(err.message || 'Error al agregar el gasto')
@@ -154,37 +190,15 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
             </div>
           )}
 
-          {/* Monto, Categoría y Usuario */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Categoría, Monto, Fecha, Realizado por y Registrado por */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm font-medium">
-                Monto *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-3 text-sm text-muted-foreground">$</span>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="1"
-                  min="0"
-                  placeholder="100000"
-                  className="pl-8"
-                  error={errors.amount?.message}
-                  {...register('amount', { valueAsNumber: true })}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Sin decimales (ej: 100000)
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="category" className="text-sm font-medium">
-                Categoría (Opcional)
+              <label htmlFor="category" className="text-sm font-medium text-center block">
+                Categoría *
               </label>
               <select
                 id="category"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-center ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 {...register('category')}
               >
                 <option value="">Seleccionar categoría</option>
@@ -194,10 +208,61 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                   </option>
                 ))}
               </select>
+              {errors.category && (
+                <p className="text-sm text-destructive text-center">{errors.category.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="performed_by" className="text-sm font-medium">
+              <label htmlFor="amount" className="text-sm font-medium text-center block">
+                Monto *
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-3 text-sm text-muted-foreground">$</span>
+                <input
+                  id="amount"
+                  type="text"
+                  placeholder="100.000"
+                  className="flex h-10 w-full rounded-md border border-input bg-background py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{
+                    textAlign: 'center',
+                    paddingLeft: '32px',
+                    paddingRight: '32px'
+                  }}
+                  value={displayAmount}
+                  onChange={handleAmountChange}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Formato automático (ej: 100.000)
+              </p>
+              {errors.amount && (
+                <p className="text-sm text-destructive text-center">{errors.amount.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="expense_date" className="text-sm font-medium text-center block">
+                Fecha *
+              </label>
+              <input
+                id="expense_date"
+                type="date"
+                className="flex h-10 w-full rounded-md border border-input bg-background py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ 
+                  textAlign: 'center',
+                  paddingLeft: '40px',
+                  paddingRight: '40px'
+                }}
+                {...register('expense_date')}
+              />
+              {errors.expense_date && (
+                <p className="text-sm text-destructive text-center">{errors.expense_date.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="performed_by" className="text-sm font-medium text-center block">
                 Realizado por *
               </label>
               <Controller
@@ -206,7 +271,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                 render={({ field }) => (
                   <select
                     id="performed_by"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-center ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={(field.value && field.value !== '') ? field.value : (currentUser || '')}
                     onChange={field.onChange}
                   >
@@ -224,44 +289,48 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                 )}
               />
               {errors.performed_by && (
-                <p className="text-sm text-destructive">{errors.performed_by.message}</p>
+                <p className="text-sm text-destructive text-center">{errors.performed_by.message}</p>
               )}
             </div>
-          </div>
 
-          {/* Registrado por */}
-          <div className="bg-gray-50 p-3 rounded-md border">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="font-medium">Registrado por:</span>
-              <span>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600 text-center block">
+                Registrado por
+              </label>
+              <div className="flex h-10 w-full rounded-md border border-input bg-gray-50 px-3 py-2 text-sm text-gray-600 items-center justify-center">
                 {members.find(m => m.user_id === currentUser)?.user?.full_name || 
                  members.find(m => m.user_id === currentUser)?.user?.email || 
                  'Usuario actual'}
-              </span>
+              </div>
             </div>
           </div>
 
-          {/* Descripción mejorada */}
-          <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              Descripción *
-            </label>
-            <textarea
-              id="description"
-              placeholder="Describe el gasto realizado, proveedor, detalles del producto o servicio..."
-              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-              {...register('description')}
-            />
-            {errors.description && (
-              <p className="text-sm text-destructive">{errors.description.message}</p>
-            )}
-          </div>
+          {/* Descripción y Documentos de respaldo lado a lado */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Descripción */}
+            <div className="space-y-2">
+              <label htmlFor="description" className="text-sm font-medium text-center block">
+                Descripción *
+              </label>
+              <textarea
+                id="description"
+                placeholder={selectedCategory === 'Otros' 
+                  ? "Describe detalladamente el tipo de gasto..." 
+                  : "Describe el gasto realizado, proveedor, detalles del producto o servicio..."
+                }
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-3 text-sm text-center ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                {...register('description')}
+              />
+              {errors.description && (
+                <p className="text-sm text-destructive text-center">{errors.description.message}</p>
+              )}
+            </div>
 
-          {/* File Upload */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Documentos de respaldo
-            </label>
+            {/* Documentos de respaldo */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-center block">
+                Documentos de respaldo
+              </label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
               <div className="text-center">
                 <Upload className="mx-auto h-8 w-8 text-gray-400" />
@@ -286,28 +355,29 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
               </div>
             </div>
 
-            {/* Selected Files */}
-            {files.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Archivos seleccionados:</p>
-                {files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{file.name}</p>
-                      <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+              {/* Selected Files */}
+              {files.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Archivos seleccionados:</p>
+                  {files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{file.name}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <Button 

@@ -230,6 +230,28 @@ export const inventoryService = {
     return { file: rec, thumbnail_url: publicUrl }
   },
 
+  async deleteItemImage(itemId: string) {
+    try {
+      // Fetch file paths to remove from storage
+      const { data: files } = await supabase
+        .from('inventory_files')
+        .select('file_path')
+        .eq('item_id', itemId)
+
+      const paths = (files || []).map((f: any) => f.file_path)
+      if (paths.length > 0) {
+        await supabase.storage.from(BUCKET).remove(paths)
+        await supabase.from('inventory_files').delete().eq('item_id', itemId)
+      }
+
+      // Remove thumbnail_url from item
+      await this.updateItem(itemId, { thumbnail_url: null })
+    } catch (e) {
+      console.error('Error deleting item image:', e)
+      throw e
+    }
+  },
+
   async deleteItem(itemId: string) {
     try {
       // Fetch file paths to remove from storage

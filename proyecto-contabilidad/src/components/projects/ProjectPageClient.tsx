@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Plus, DollarSign, Receipt, Settings, ArrowLeft, BarChart3, TrendingUp, Users, Boxes, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { AddBalanceForm } from '@/components/balances/AddBalanceForm'
-import { BalancesList } from '@/components/balances/BalancesList'
 import { AddIncomeForm } from '@/components/income/AddIncomeForm'
 import { IncomeList } from '@/components/income/IncomeList'
 import { AddExpenseForm } from '@/components/expenses/AddExpenseForm'
@@ -14,10 +12,8 @@ import { ExpensesList } from '@/components/expenses/ExpensesList'
 import { InventoryTab } from '@/components/inventory/InventoryTab'
 import { AccountSettingsModal } from '@/components/account/AccountSettingsModal'
 import { ExpenseChart } from '@/components/charts/ExpenseChart'
-import { BalanceChart } from '@/components/charts/BalanceChart'
-import { BalanceAnalyticsChart } from '@/components/charts/BalanceAnalyticsChart'
+import { IncomeChart } from '@/components/charts/IncomeChart'
 import { projectsService } from '@/lib/projects'
-import { balancesService, type Balance } from '@/lib/balances'
 import { incomeService, type Income } from '@/lib/income'
 import { expensesService, type Expense } from '@/lib/expenses'
 import { formatCurrency } from '@/lib/currency'
@@ -34,14 +30,12 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
   const router = useRouter()
 
   const [project, setProject] = useState<any>(null)
-  const [balances, setBalances] = useState<Balance[]>([])
   const [income, setIncome] = useState<Income[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<UserRole>('view')
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(initialTab || 'overview')
-  const [showAddBalance, setShowAddBalance] = useState(false)
   const [showAddIncome, setShowAddIncome] = useState(false)
   const [showAddExpense, setShowAddExpense] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
@@ -60,7 +54,6 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     } else {
       setActiveTab(tab)
     }
-    setShowAddBalance(false)
     setShowAddIncome(false)
     setShowAddExpense(false)
   }
@@ -75,16 +68,14 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         }
         setUser(user)
 
-        const [projectData, balancesData, incomeData, expensesData, role] = await Promise.all([
+        const [projectData, incomeData, expensesData, role] = await Promise.all([
           projectsService.getProject(projectId),
-          balancesService.getProjectBalances(projectId),
           incomeService.getProjectIncome(projectId),
           expensesService.getProjectExpenses(projectId),
           projectsService.getUserRole(projectId, user.id),
         ])
 
         setProject(projectData)
-        setBalances(balancesData)
         setIncome(incomeData)
         setExpenses(expensesData)
         setUserRole(role as UserRole)
@@ -100,15 +91,6 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     }
   }, [projectId])
 
-  const handleBalanceUpdate = async () => {
-    try {
-      const balancesData = await balancesService.getProjectBalances(projectId)
-      setBalances(balancesData)
-      setShowAddBalance(false)
-    } catch (error) {
-      console.error('Error updating balances:', error)
-    }
-  }
 
   const handleIncomeUpdate = async () => {
     try {
@@ -167,10 +149,9 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     )
   }
 
-  const totalBalance = balances.reduce((sum, balance) => sum + balance.amount, 0)
   const totalIncome = income.filter(i => i.status === 'approved').reduce((sum, inc) => sum + inc.amount, 0)
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
-  const calculatedBalance = totalIncome - totalExpenses + totalBalance
+  const calculatedBalance = totalIncome - totalExpenses
 
   const formatAmount = (amount: number) => {
     const currency = project?.currency || 'COP'
@@ -246,19 +227,6 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
             )}
             {permissions.canEdit(userRole) && (
               <button
-                onClick={() => handleTabChange('balances')}
-                className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  activeTab === 'balances'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <DollarSign className="h-4 w-4 inline mr-2" />
-                Balance ({balances.length})
-              </button>
-            )}
-            {permissions.canEdit(userRole) && (
-              <button
                 onClick={() => handleTabChange('expenses')}
                 className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === 'expenses'
@@ -313,8 +281,8 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         </div>
       </div>
 
-      {/* Mostrar las tarjetas de resumen en todas las pestañas EXCEPTO en Balance e Inventario */}
-      {activeTab !== 'balances' && activeTab !== 'inventory' && (
+      {/* Mostrar las tarjetas de resumen en todas las pestañas EXCEPTO en Inventario */}
+      {activeTab !== 'inventory' && (
         <div className={`grid gap-6 mb-6 ${userRole === 'view' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'}`}>
           <Card>
             <CardHeader className="pb-2">
@@ -366,12 +334,6 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
       <div>
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {showAddBalance && (
-              <AddBalanceForm
-                projectId={projectId}
-                onSuccess={handleBalanceUpdate}
-              />
-            )}
             {showAddIncome && (
               <AddIncomeForm
                 projectId={projectId}
@@ -386,10 +348,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
             )}
 
             <div className={`grid gap-6 ${userRole === 'view' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
-              {/* Solo mostrar BalanceChart si el usuario NO es de vista */}
-              {userRole !== 'view' && (
-                <BalanceChart balances={balances} expenses={expenses} />
-              )}
+              <IncomeChart income={income} totalIncome={totalIncome} />
               <ExpenseChart expenses={expenses} totalExpenses={totalExpenses} />
             </div>
 
@@ -409,13 +368,8 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                           {formatAmount(incomeItem.amount)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {incomeItem.title}
+                          {incomeItem.category || 'Sin categoría'}
                         </p>
-                        {incomeItem.category && (
-                          <p className="text-xs text-gray-400">
-                            {incomeItem.category}
-                          </p>
-                        )}
                         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mt-1">
                           <span>
                             <strong>Realizado por:</strong> {incomeItem.performed_user?.full_name || incomeItem.performed_user?.email || 'Usuario desconocido'}
@@ -507,35 +461,6 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
           </div>
         )}
 
-        {activeTab === 'balances' && (
-          <div className="space-y-6">
-            {showAddBalance && (
-              <AddBalanceForm
-                projectId={projectId}
-                onSuccess={handleBalanceUpdate}
-              />
-            )}
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-medium">Balance del Proyecto</h2>
-              {permissions.canEdit(userRole) && (
-                <Button onClick={() => setShowAddBalance(!showAddBalance)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {showAddBalance ? 'Cancelar' : 'Agregar Balance'}
-                </Button>
-              )}
-            </div>
-            
-            {/* Gráficas de análisis de balance */}
-            <BalanceAnalyticsChart balances={balances} />
-            
-            <BalancesList
-              balances={balances}
-              currentUserId={user?.id || ''}
-              userRole={userRole}
-              onUpdate={handleBalanceUpdate}
-            />
-          </div>
-        )}
 
         {activeTab === 'expenses' && (
           <div className="space-y-6">

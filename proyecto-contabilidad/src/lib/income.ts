@@ -4,7 +4,6 @@ export interface Income {
   id: string
   project_id: string
   user_id: string
-  title: string
   description: string | null
   amount: number
   category: string | null
@@ -29,12 +28,11 @@ export interface Income {
 export const incomeService = {
   // Create a new income entry
   async createIncome(projectId: string, incomeData: {
-    title: string
     description?: string
     amount: number
-    category?: string
+    category: string
     income_date: string
-    performed_by?: string
+    performed_by: string
   }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Usuario no autenticado')
@@ -44,7 +42,6 @@ export const incomeService = {
       .insert({
         project_id: projectId,
         user_id: user.id, // Usuario que registra (sesión actual)
-        title: incomeData.title,
         description: incomeData.description,
         amount: incomeData.amount,
         category: incomeData.category,
@@ -137,5 +134,35 @@ export const incomeService = {
 
     const total = (data || []).reduce((sum, income) => sum + income.amount, 0)
     return total
+  },
+
+  // Upload file for income
+  async uploadIncomeFile(incomeId: string, file: File) {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${incomeId}_${Date.now()}.${fileExt}`
+    const filePath = `income-files/${fileName}`
+
+    // Upload file to storage
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(filePath, file)
+
+    if (uploadError) throw uploadError
+
+    // Save file info to database
+    const { data, error } = await supabase
+      .from('income_files')
+      .insert({
+        income_id: incomeId,
+        file_name: file.name,
+        file_path: filePath,
+        file_type: file.type,
+        file_size: file.size,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   },
 }

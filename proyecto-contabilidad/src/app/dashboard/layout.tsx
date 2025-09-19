@@ -70,23 +70,23 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50">
       <nav className="bg-white shadow-lg border-b border-primary-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg flex items-center justify-center">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center min-w-0 flex-1">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-sm">MM</span>
                 </div>
-                <h1 className="text-xl font-bold text-primary-800">
+                <h1 className="text-lg sm:text-xl font-bold text-primary-800 truncate">
                   Meister Manager
                 </h1>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 flex-shrink-0">
               {user && (
                 <>
-                  <div className="text-right">
+                  <div className="text-right hidden sm:block">
                     <p className="text-sm font-medium text-primary-800">
                       {user.user_metadata?.full_name || user.email}
                     </p>
@@ -101,7 +101,7 @@ export default function DashboardLayout({
                         const event = new CustomEvent('toggleProjectSettings');
                         window.dispatchEvent(event);
                       }}
-                      className="text-primary-600 hover:text-primary-800"
+                      className="text-primary-600 hover:text-primary-800 hidden sm:flex"
                     >
                       <Settings className="h-4 w-4 mr-2" />
                       Configuración
@@ -119,9 +119,10 @@ export default function DashboardLayout({
                     variant="outline"
                     size="sm"
                     onClick={handleSignOut}
+                    className="flex items-center"
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Cerrar Sesión
+                    <LogOut className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Cerrar Sesión</span>
                   </Button>
                 </>
               )}

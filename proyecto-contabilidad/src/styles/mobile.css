@@ -18,6 +18,23 @@
     min-width: 44px;
   }
   
+  /* Prevenir scroll horizontal no deseado */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Mejorar navegación de tabs */
+  .tab-navigation {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  
+  .tab-button {
+    min-width: fit-content;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  
   /* Mejorar espaciado en formularios */
   input, select, textarea {
     font-size: 16px; /* Previene zoom en iOS */

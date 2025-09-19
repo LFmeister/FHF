@@ -18,6 +18,7 @@ export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [countdown, setCountdown] = useState(10)
   const router = useRouter()
 
   const {
@@ -27,6 +28,7 @@ export function RegisterForm() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   })
+
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true)
@@ -40,14 +42,44 @@ export function RegisterForm() {
       )
 
       if (authError) {
-        setError(authError.message)
+        // Mejorar los mensajes de error
+        let errorMessage = authError.message
+        
+        if (errorMessage.includes('User already registered') || 
+            errorMessage.includes('already been registered') ||
+            errorMessage.includes('already registered')) {
+          errorMessage = 'Este correo electrónico ya está registrado. Intenta iniciar sesión.'
+        } else if (errorMessage.includes('Password should be at least')) {
+          errorMessage = 'La contraseña debe tener al menos 6 caracteres.'
+        } else if (errorMessage.includes('Invalid email')) {
+          errorMessage = 'El formato del correo electrónico no es válido.'
+        } else if (errorMessage.includes('Signup is disabled')) {
+          errorMessage = 'El registro está temporalmente deshabilitado. Intenta más tarde.'
+        } else if (errorMessage.includes('Email rate limit exceeded')) {
+          errorMessage = 'Se han enviado demasiados correos. Espera unos minutos antes de intentar nuevamente.'
+        } else if (errorMessage.includes('Invalid password')) {
+          errorMessage = 'La contraseña no cumple con los requisitos de seguridad.'
+        }
+        
+        setError(errorMessage)
         return
       }
 
       setSuccess(true)
-      setTimeout(() => {
-        router.push('/auth/login')
-      }, 2000)
+      
+      // Iniciar countdown de 10 segundos
+      let timeLeft = 10
+      setCountdown(timeLeft)
+      
+      const countdownInterval = setInterval(() => {
+        timeLeft -= 1
+        setCountdown(timeLeft)
+        
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval)
+          router.push('/auth/login')
+        }
+      }, 1000)
     } catch (err) {
       setError('Error inesperado. Por favor, intenta de nuevo.')
     } finally {
@@ -55,28 +87,51 @@ export function RegisterForm() {
     }
   }
 
+  const goToLogin = () => {
+    router.push('/auth/login')
+  }
+
   if (success) {
     return (
       <Card className="w-full max-w-md mx-auto shadow-xl border-0">
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-primary-800">¡Registro Exitoso!</h2>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm font-medium text-yellow-800 mb-2">
-                📧 Confirma tu correo electrónico
+            <h2 className="text-xl font-semibold text-green-800">¡Registro Exitoso!</h2>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-center mb-3">
+                <Mail className="w-5 h-5 text-blue-600 mr-2" />
+                <p className="text-sm font-medium text-blue-800">
+                  Confirma tu correo electrónico
+                </p>
+              </div>
+              <p className="text-sm text-blue-700 mb-3">
+                Te hemos enviado un enlace de confirmación a tu correo. <strong>Debes hacer clic en él antes de poder iniciar sesión.</strong>
               </p>
-              <p className="text-sm text-yellow-700">
-                Te hemos enviado un enlace de confirmación. Debes hacer clic en él antes de poder iniciar sesión.
+              <div className="bg-blue-100 rounded-md p-2">
+                <p className="text-xs text-blue-600">
+                  💡 Revisa también tu carpeta de spam si no encuentras el correo.
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <Button 
+                onClick={goToLogin}
+                className="w-full bg-primary-600 hover:bg-primary-700"
+              >
+                Ir al Login
+              </Button>
+              
+              <p className="text-xs text-gray-500">
+                Redirección automática en {countdown} segundos
               </p>
             </div>
-            <p className="text-sm text-gray-600">
-              Serás redirigido al login en unos segundos.
-            </p>
           </div>
         </CardContent>
       </Card>
@@ -94,8 +149,21 @@ export function RegisterForm() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {error && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-              {error}
+            <div className="p-4 text-sm bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="font-medium text-red-800 mb-1">Error en el registro</p>
+                  <p className="text-red-700">{error}</p>
+                  {error.includes('ya está registrado') && (
+                    <Link href="/auth/login" className="inline-block mt-2 text-sm text-red-600 hover:text-red-800 underline">
+                      ¿Ya tienes cuenta? Inicia sesión aquí
+                    </Link>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -181,8 +249,13 @@ export function RegisterForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" loading={isLoading}>
-            Crear Cuenta
+          <Button 
+            type="submit" 
+            className="w-full" 
+            loading={isLoading}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
           </Button>
 
           <div className="text-center text-sm">

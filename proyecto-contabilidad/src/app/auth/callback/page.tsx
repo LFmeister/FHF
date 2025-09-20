@@ -14,15 +14,13 @@ export default function AuthCallbackPage() {
   const [email, setEmail] = useState('')
   const [resendLoading, setResendLoading] = useState(false)
   const [resendInfo, setResendInfo] = useState<string | null>(null)
-  const [isResending, setIsResending] = useState(false)
-  const [userEmail, setUserEmail] = useState('')
+
   const router = useRouter()
   const searchParams = useSearchParams()
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('🔍 Iniciando proceso de callback...')
 
         // Extraer email si viene en query o hash
         let foundEmail = searchParams.get('email') || ''
@@ -36,7 +34,6 @@ export default function AuthCallbackPage() {
         // 1) Intentar obtener sesión desde URL leyendo el hash (#access_token/#refresh_token)
         const { set: setFromHash, error: setHashError } = await auth.setSessionFromHash()
         if (setFromHash) {
-          console.log('✅ Sesión obtenida desde URL (hash).')
           setStatus('success')
           setMessage('¡Correo electrónico confirmado exitosamente!')
           setTimeout(() => router.push('/dashboard'), 3000)
@@ -56,11 +53,9 @@ export default function AuthCallbackPage() {
           code = hashParams.get('code') || code
           error = hashParams.get('error') || error
           errorDescription = hashParams.get('error_description') || errorDescription
-          console.log('📊 Parámetros encontrados:', { code: !!code, error, errorDescription })
         }
 
         if (error) {
-          console.error('❌ Error en callback:', { error, errorDescription })
           setStatus('error')
           
           // Manejar diferentes tipos de errores
@@ -75,25 +70,20 @@ export default function AuthCallbackPage() {
         }
 
         if (!code) {
-          console.error('❌ No se encontró código de confirmación')
           setStatus('error')
           setMessage('Código de confirmación no encontrado en la URL')
           return
         }
 
-        console.log('✅ Código encontrado, intercambiando por sesión...')
-
         // Intercambiar el código por una sesión
         const { error: exchangeError } = await auth.exchangeCodeForSession(code)
 
         if (exchangeError) {
-          console.error('❌ Error al intercambiar código:', exchangeError)
           setStatus('error')
           setMessage(exchangeError.message || 'Error al confirmar el correo electrónico')
           return
         }
 
-        console.log('🎉 Email confirmado exitosamente!')
         setStatus('success')
         setMessage('¡Correo electrónico confirmado exitosamente!')
 
@@ -103,7 +93,6 @@ export default function AuthCallbackPage() {
         }, 3000)
 
       } catch (error) {
-        console.error('🚨 Error inesperado en callback:', error)
         setStatus('error')
         setMessage('Error inesperado al procesar la confirmación')
       }
@@ -137,31 +126,6 @@ export default function AuthCallbackPage() {
       }
     } finally {
       setResendLoading(false)
-    }
-  }
-
-  const handleResendEmail = async () => {
-    if (!userEmail) {
-      // Si no tenemos el email, redirigir al registro
-      router.push('/auth/register')
-      return
-    }
-
-    setIsResending(true)
-    try {
-      const { error } = await auth.resendConfirmation(userEmail)
-      
-      if (error) {
-        console.error('Error reenviando email:', error)
-        setMessage('Error al reenviar el email. Intenta registrarte nuevamente.')
-      } else {
-        setMessage('¡Email de confirmación reenviado! Revisa tu bandeja de entrada.')
-      }
-    } catch (error) {
-      console.error('Error inesperado:', error)
-      setMessage('Error inesperado. Intenta más tarde.')
-    } finally {
-      setIsResending(false)
     }
   }
 

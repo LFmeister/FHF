@@ -45,7 +45,6 @@ export default function ResetPasswordPage() {
         const { session } = await auth.getSession()
         setIsValidSession(!!session)
       } catch (error) {
-        console.error('Error checking session:', error)
         setIsValidSession(false)
       }
     }

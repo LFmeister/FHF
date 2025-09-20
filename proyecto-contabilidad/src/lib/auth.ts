@@ -6,8 +6,20 @@ export interface AuthUser extends User {
 }
 
 export const auth = {
+  // Resolve the site base URL (production or local) and ensure it includes the basePath '/FHF'
+  getBaseUrl(): string {
+    const envUrl = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '')
+    if (envUrl) return envUrl
+    if (typeof window !== 'undefined') {
+      // Ensure basePath '/FHF' for GitHub Pages
+      const origin = window.location.origin.replace(/\/$/, '')
+      return `${origin}/FHF`
+    }
+    return ''
+  },
   // Sign up new user
   async signUp(email: string, password: string, fullName: string) {
+    const redirect = `${this.getBaseUrl()}/auth/callback?email=${encodeURIComponent(email)}`
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -15,7 +27,7 @@ export const auth = {
         data: {
           full_name: fullName,
         },
-        emailRedirectTo: `${window.location.origin}/FHF/auth/callback`,
+        emailRedirectTo: redirect,
       },
     })
     return { data, error }
@@ -39,7 +51,7 @@ export const auth = {
   // Reset password
   async resetPassword(email: string) {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/FHF/auth/reset-password`,
+      redirectTo: `${this.getBaseUrl()}/auth/reset-password`,
     })
     return { data, error }
   },
@@ -84,11 +96,12 @@ export const auth = {
 
   // Resend confirmation email
   async resendConfirmation(email: string) {
+    const redirect = `${this.getBaseUrl()}/auth/callback?email=${encodeURIComponent(email)}`
     const { data, error } = await supabase.auth.resend({
       type: 'signup',
       email: email,
       options: {
-        emailRedirectTo: `${window.location.origin}/FHF/auth/callback`,
+        emailRedirectTo: redirect,
       }
     })
     return { data, error }
@@ -101,12 +114,35 @@ export const auth = {
   },
 
   // Get session from URL (handles both query code and hash tokens)
-  async getSessionFromUrl() {
-    // Some versions of supabase-js typings may not expose getSessionFromUrl.
-    // Cast to any to ensure runtime support while keeping TS happy.
-    const authAny = supabase.auth as any
-    const { data, error } = await authAny.getSessionFromUrl({ storeSession: true })
-    return { data, error }
+  async setSessionFromHash() {
+    if (typeof window === 'undefined') return { set: false, error: null as any }
+    const hash = window.location.hash
+    if (!hash || hash.length < 2) return { set: false, error: null as any }
+
+    const params = new URLSearchParams(hash.substring(1))
+    const hashError = params.get('error')
+    const errorDescription = params.get('error_description')
+    if (hashError) {
+      return { set: false, error: { message: `${hashError}: ${errorDescription || ''}` } as any }
+    }
+
+    const access_token = params.get('access_token')
+    const refresh_token = params.get('refresh_token')
+    if (!access_token || !refresh_token) {
+      return { set: false, error: null as any }
+    }
+
+    // Try to set session manually using tokens from hash
+    const { data, error } = await supabase.auth.setSession({ access_token, refresh_token })
+    if (!error) {
+      // Clean the URL hash for security/UX
+      try {
+        const url = window.location.pathname + window.location.search
+        window.history.replaceState({}, document.title, url)
+      } catch {}
+      return { set: true, session: data?.session, error: null as any }
+    }
+    return { set: false, error }
   },
 
   // Exchange code for session (for email confirmation)

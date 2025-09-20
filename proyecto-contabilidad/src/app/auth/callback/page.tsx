@@ -33,9 +33,9 @@ export default function AuthCallbackPage() {
         }
         if (foundEmail) setEmail(foundEmail)
 
-        // 1) Intentar obtener sesión desde URL (maneja hash: #access_token, etc.)
-        const { data: urlData, error: urlErr } = await auth.getSessionFromUrl()
-        if (!urlErr && urlData?.session) {
+        // 1) Intentar obtener sesión desde URL leyendo el hash (#access_token/#refresh_token)
+        const { set: setFromHash, error: setHashError } = await auth.setSessionFromHash()
+        if (setFromHash) {
           console.log('✅ Sesión obtenida desde URL (hash).')
           setStatus('success')
           setMessage('¡Correo electrónico confirmado exitosamente!')

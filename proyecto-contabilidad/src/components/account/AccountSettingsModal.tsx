@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -28,10 +27,7 @@ export function AccountSettingsModal({ isOpen, onClose, currentEmail, currentFul
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
-  // Delete account states
-  const [deleteText, setDeleteText] = useState('')
-  const [deleting, setDeleting] = useState(false)
-  const router = useRouter()
+  // (Self-delete feature removed)
 
   if (!isOpen) return null
 
@@ -52,51 +48,7 @@ export function AccountSettingsModal({ isOpen, onClose, currentEmail, currentFul
     }
   }
 
-  const handleDeleteAccount = async () => {
-    setMsg(null); setErr(null)
-
-    if (deleteText.trim().toUpperCase() !== 'ELIMINAR') {
-      setErr('Escribe "ELIMINAR" para confirmar la eliminación de tu cuenta')
-      return
-    }
-
-    try {
-      setDeleting(true)
-      // Obtener el token actual
-      const { session } = await auth.getSession()
-      const token = session?.access_token
-      if (!token) {
-        setErr('No hay sesión activa. Vuelve a iniciar sesión e inténtalo de nuevo.')
-        setDeleting(false)
-        return
-      }
-
-      // Intentar eliminar contra ruta API (disponible en entornos con server)
-      const res = await fetch('/api/account/delete', {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        const msg = data?.error || 'No se pudo eliminar la cuenta. Intenta más tarde.'
-        setErr(msg)
-        setDeleting(false)
-        return
-      }
-
-      // Cerrar sesión y redirigir
-      await auth.signOut()
-      setMsg('Tu cuenta ha sido eliminada. Gracias por usar la plataforma.')
-      router.push('/auth/register')
-    } catch (e: any) {
-      setErr(e?.message || 'Error inesperado al eliminar la cuenta')
-    } finally {
-      setDeleting(false)
-    }
-  }
+  // (Self-delete handler removed)
 
   const handleUpdateEmail = async () => {
     setMsg(null); setErr(null)
@@ -206,31 +158,7 @@ export function AccountSettingsModal({ isOpen, onClose, currentEmail, currentFul
             </div>
           </section>
 
-          {/* Eliminar cuenta */}
-          <section>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Eliminar cuenta</h4>
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 space-y-2">
-              <p>
-                Esta acción es <strong>permanente</strong> y eliminará tu cuenta y datos asociados. 
-                Escribe <strong>ELIMINAR</strong> para confirmar.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input 
-                  value={deleteText} 
-                  onChange={(e) => setDeleteText(e.target.value)} 
-                  placeholder="Escribe ELIMINAR" 
-                />
-                <Button 
-                  onClick={handleDeleteAccount} 
-                  disabled={deleting || deleteText.trim().toUpperCase() !== 'ELIMINAR'}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  {deleting ? 'Eliminando...' : 'Eliminar definitivamente'}
-                </Button>
-              </div>
-              <p className="text-xs text-red-600">No podrás recuperar tu cuenta una vez eliminada.</p>
-            </div>
-          </section>
+          {/* Sección de eliminación de cuenta removida */}
         </div>
       </div>
     </div>

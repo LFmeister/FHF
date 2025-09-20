@@ -1,0 +1,13 @@
+1:HL["/FHF/_next/static/media/e4af272ccee01ff0-s.p.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+2:HL["/FHF/_next/static/css/f91bbfe51c03a95a.css","style",{"crossOrigin":""}]
+0:["Bq0StYY0LX30pUSpuI3dK",[[["",{"children":["dashboard",{"children":["__PAGE__",{}]}]},"$undefined","$undefined",true],"$L3",[[["$","link","0",{"rel":"stylesheet","href":"/FHF/_next/static/css/f91bbfe51c03a95a.css","precedence":"next","crossOrigin":""}]],"$L4"]]]]
+5:I[6954,[],""]
+6:I[7264,[],""]
+7:I[3619,["160","static/chunks/app/not-found-3ea72e0840a1772a.js"],""]
+8:I[2766,["218","static/chunks/218-72b5597c9448d783.js","663","static/chunks/app/dashboard/layout-3fcaee7cd452b60f.js"],""]
+a:I[8297,[],""]
+b:I[4909,["218","static/chunks/218-72b5597c9448d783.js","727","static/chunks/727-67fe06b2dd456437.js","473","static/chunks/473-68ab55fc4c3d5d4c.js","665","static/chunks/665-8ce4dcc6b1d6675f.js","702","static/chunks/app/dashboard/page-2aeb9d4f150f12ec.js"],""]
+c:{}
+3:[null,["$","html",null,{"lang":"es","children":["$","body",null,{"className":"__className_dcf999","children":["$","$L5",null,{"parallelRouterKey":"children","segmentPath":["children"],"loading":"$undefined","loadingStyles":"$undefined","loadingScripts":"$undefined","hasLoading":false,"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L6",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":["$","$L7",null,{}],"notFoundStyles":[],"childProp":{"current":[null,["$","$L8",null,{"children":["$","$L5",null,{"parallelRouterKey":"children","segmentPath":["children","dashboard","children"],"loading":"$undefined","loadingStyles":"$undefined","loadingScripts":"$undefined","hasLoading":false,"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L6",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","notFoundStyles":"$undefined","childProp":{"current":["$L9",["$","$La",null,{"propsForComponent":{"params":{}},"Component":"$b","isStaticGeneration":true}],null],"segment":"__PAGE__"},"styles":null}],"params":"$c"}],null],"segment":"dashboard"},"styles":null}]}]}],null]
+4:[["$","meta","0",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","1",{"charSet":"utf-8"}],["$","title","2",{"children":"Meister Manager"}],["$","meta","3",{"name":"description","content":"Sistema de gestión contable para proyectos colaborativos"}],["$","meta","4",{"name":"next-size-adjust"}]]
+9:null

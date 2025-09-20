@@ -39,7 +39,7 @@ export const auth = {
   // Reset password
   async resetPassword(email: string) {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: `${window.location.origin}/FHF/auth/reset-password`,
     })
     return { data, error }
   },
@@ -98,6 +98,15 @@ export const auth = {
   async getSession() {
     const { data: { session }, error } = await supabase.auth.getSession()
     return { session, error }
+  },
+
+  // Get session from URL (handles both query code and hash tokens)
+  async getSessionFromUrl() {
+    // Some versions of supabase-js typings may not expose getSessionFromUrl.
+    // Cast to any to ensure runtime support while keeping TS happy.
+    const authAny = supabase.auth as any
+    const { data, error } = await authAny.getSessionFromUrl({ storeSession: true })
+    return { data, error }
   },
 
   // Exchange code for session (for email confirmation)

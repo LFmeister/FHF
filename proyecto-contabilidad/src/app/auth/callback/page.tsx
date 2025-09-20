@@ -5,11 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { auth } from '@/lib/auth'
 
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
+  const [email, setEmail] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendInfo, setResendInfo] = useState<string | null>(null)
   const [isResending, setIsResending] = useState(false)
   const [userEmail, setUserEmail] = useState('')
   const router = useRouter()
@@ -19,21 +23,39 @@ export default function AuthCallbackPage() {
     const handleAuthCallback = async () => {
       try {
         console.log('🔍 Iniciando proceso de callback...')
-        
+
+        // Extraer email si viene en query o hash
+        let foundEmail = searchParams.get('email') || ''
+        if (!foundEmail && typeof window !== 'undefined') {
+          const hashForEmail = window.location.hash.substring(1)
+          const hashEmailParams = new URLSearchParams(hashForEmail)
+          foundEmail = hashEmailParams.get('email') || ''
+        }
+        if (foundEmail) setEmail(foundEmail)
+
+        // 1) Intentar obtener sesión desde URL (maneja hash: #access_token, etc.)
+        const { data: urlData, error: urlErr } = await auth.getSessionFromUrl()
+        if (!urlErr && urlData?.session) {
+          console.log('✅ Sesión obtenida desde URL (hash).')
+          setStatus('success')
+          setMessage('¡Correo electrónico confirmado exitosamente!')
+          setTimeout(() => router.push('/dashboard'), 3000)
+          return
+        }
+
+        // 2) Si falla, intentar con query param ?code=
         // Obtener parámetros de la URL (query params)
         let code = searchParams.get('code')
         let error = searchParams.get('error')
         let errorDescription = searchParams.get('error_description')
 
-        // Si no hay parámetros en query, revisar en hash fragment
-        if (!code && !error && typeof window !== 'undefined') {
+        // Si no hay parámetros en query, revisar en hash fragment por posibles errores
+        if (!code && typeof window !== 'undefined') {
           const hash = window.location.hash.substring(1) // Remover el #
           const hashParams = new URLSearchParams(hash)
-          
-          code = hashParams.get('code')
-          error = hashParams.get('error')
-          errorDescription = hashParams.get('error_description')
-          
+          code = hashParams.get('code') || code
+          error = hashParams.get('error') || error
+          errorDescription = hashParams.get('error_description') || errorDescription
           console.log('📊 Parámetros encontrados:', { code: !!code, error, errorDescription })
         }
 
@@ -96,6 +118,26 @@ export default function AuthCallbackPage() {
 
   const handleGoToLogin = () => {
     router.push('/auth/login')
+  }
+
+  const handleResend = async () => {
+    setResendInfo(null)
+    setResendLoading(true)
+    try {
+      const target = email.trim()
+      if (!target) {
+        setResendInfo('Ingresa tu email para reenviar el enlace de confirmación.')
+        return
+      }
+      const { error } = await auth.resendConfirmation(target)
+      if (error) {
+        setResendInfo(`No se pudo reenviar el correo: ${error.message}`)
+      } else {
+        setResendInfo('Correo de confirmación reenviado. Revisa tu bandeja y carpeta de spam.')
+      }
+    } finally {
+      setResendLoading(false)
+    }
   }
 
   const handleResendEmail = async () => {
@@ -179,21 +221,25 @@ export default function AuthCallbackPage() {
                       <li>• Solicita un nuevo enlace de confirmación</li>
                     )}
                     <li>• Verifica que el enlace esté completo</li>
-                    <li>• Intenta registrarte nuevamente</li>
-                    <li>• Contacta al soporte si el problema persiste</li>
                   </ul>
                 </div>
-                
-                {message.includes('expirado') && (
-                  <Button 
-                    onClick={handleResendEmail}
-                    loading={isResending}
-                    className="w-full mb-2"
-                  >
-                    {isResending ? 'Reenviando...' : 'Reenviar Email de Confirmación'}
-                  </Button>
-                )}
-                
+                <div className="space-y-2 text-left">
+                  <label className="text-sm font-medium">Tu email</label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="email"
+                      placeholder="tu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                    <Button onClick={handleResend} disabled={resendLoading}>
+                      {resendLoading ? 'Enviando...' : 'Reenviar'}
+                    </Button>
+                  </div>
+                  {resendInfo && (
+                    <p className="text-xs text-gray-600 mt-1">{resendInfo}</p>
+                  )}
+                </div>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button 
                     variant="outline"
@@ -206,7 +252,7 @@ export default function AuthCallbackPage() {
                     onClick={() => router.push('/auth/register')}
                     className="flex-1"
                   >
-                    Registrarse Nuevamente
+                    Registrarse
                   </Button>
                 </div>
               </div>

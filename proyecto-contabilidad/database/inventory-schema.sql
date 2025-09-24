@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS public.inventory_items (
   project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
   name text NOT NULL,
   description text NULL,
+  unit_value numeric(12,2) NULL,
   thumbnail_url text NULL,
   created_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   created_at timestamptz NOT NULL DEFAULT now(),

@@ -7,6 +7,7 @@ export interface InventoryItem {
   project_id: string
   name: string
   description: string | null
+  unit_value: number | null
   created_by: string
   created_at: string
   updated_at: string
@@ -40,7 +41,7 @@ const BUCKET = 'inventory-files'
 
 export const inventoryService = {
   // Items
-  async createItem(projectId: string, data: { name: string; description?: string | null }) {
+  async createItem(projectId: string, data: { name: string; description?: string | null; unit_value?: number | null }) {
     const { data: auth } = await supabase.auth.getUser()
     const user = auth?.user
     if (!user) throw new Error('Usuario no autenticado')
@@ -51,6 +52,7 @@ export const inventoryService = {
         project_id: projectId,
         name: data.name,
         description: data.description ?? null,
+        unit_value: data.unit_value ?? null,
         created_by: user.id,
       })
       .select('*')
@@ -71,7 +73,11 @@ export const inventoryService = {
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    return (data || []) as (InventoryItem & { files: InventoryFile[] })[]
+    const items = (data || []).map((it: any) => ({
+      ...it,
+      unit_value: it.unit_value === null || it.unit_value === undefined ? null : Number(it.unit_value),
+    }))
+    return items as (InventoryItem & { files: InventoryFile[] })[]
   },
 
   async getItemStateQuantities(projectId: string) {
@@ -108,7 +114,7 @@ export const inventoryService = {
     })
   },
 
-  async updateItem(itemId: string, updates: Partial<Pick<InventoryItem, 'name' | 'description' | 'thumbnail_url'>>) {
+  async updateItem(itemId: string, updates: Partial<Pick<InventoryItem, 'name' | 'description' | 'thumbnail_url' | 'unit_value'>>) {
     const { data, error } = await supabase
       .from('inventory_items')
       .update(updates)

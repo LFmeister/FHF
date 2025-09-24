@@ -11,18 +11,9 @@ import { incomeService } from '@/lib/income'
 import { projectsService, type ProjectMember } from '@/lib/projects'
 import { supabase } from '@/lib/supabase'
 import { incomeSchema, type IncomeFormData } from '@/lib/validations'
+import { categoriesService } from '@/lib/categories'
+import { CategoryManagerModal } from '@/components/categories/CategoryManagerModal'
 
-const INCOME_CATEGORIES = [
-  'Ventas',
-  'Servicios',
-  'Inversión',
-  'Consultoría',
-  'Comisiones',
-  'Intereses',
-  'Dividendos',
-  'Alquileres',
-  'Otros'
-]
 
 interface AddIncomeFormProps {
   projectId: string
@@ -36,6 +27,8 @@ export function AddIncomeForm({ projectId, onSuccess }: AddIncomeFormProps) {
   const [uploadingFiles, setUploadingFiles] = useState(false)
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [currentUser, setCurrentUser] = useState<string | null>(null)
+  const [categories, setCategories] = useState<string[]>([])
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -49,6 +42,10 @@ export function AddIncomeForm({ projectId, onSuccess }: AddIncomeFormProps) {
         // Get project members
         const membersData = await projectsService.getProjectMembers(projectId)
         setMembers(membersData)
+
+        // Get project categories (default + custom)
+        const categoriesData = await categoriesService.getProjectCategories(projectId, 'income')
+        setCategories(categoriesData)
       } catch (error) {
         console.error('Error loading data:', error)
       }
@@ -56,6 +53,15 @@ export function AddIncomeForm({ projectId, onSuccess }: AddIncomeFormProps) {
 
     loadData()
   }, [projectId])
+
+  const handleCategoriesUpdated = async () => {
+    try {
+      const categoriesData = await categoriesService.getProjectCategories(projectId, 'income')
+      setCategories(categoriesData)
+    } catch (error) {
+      console.error('Error reloading categories:', error)
+    }
+  }
 
   const {
     register,
@@ -165,6 +171,7 @@ export function AddIncomeForm({ projectId, onSuccess }: AddIncomeFormProps) {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -195,7 +202,7 @@ export function AddIncomeForm({ projectId, onSuccess }: AddIncomeFormProps) {
                 {...register('category')}
               >
                 <option value="">Seleccionar categoría</option>
-                {INCOME_CATEGORIES.map(category => (
+                {categories.map(category => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -204,6 +211,13 @@ export function AddIncomeForm({ projectId, onSuccess }: AddIncomeFormProps) {
               {errors.category && (
                 <p className="text-sm text-destructive text-center">{errors.category.message}</p>
               )}
+              <button
+                type="button"
+                onClick={() => setShowCategoriesModal(true)}
+                className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                Gestionar categorías
+              </button>
             </div>
             <div className="space-y-2">
               <label htmlFor="amount" className="text-sm font-medium text-center block">
@@ -382,5 +396,15 @@ export function AddIncomeForm({ projectId, onSuccess }: AddIncomeFormProps) {
         </form>
       </CardContent>
     </Card>
+
+    {/* Category Manager Modal */}
+    <CategoryManagerModal
+      projectId={projectId}
+      type="income"
+      isOpen={showCategoriesModal}
+      onClose={() => setShowCategoriesModal(false)}
+      onCategoriesUpdated={handleCategoriesUpdated}
+    />
+    </>
   )
 }

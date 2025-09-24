@@ -13,10 +13,12 @@ import { InventoryTab } from '@/components/inventory/InventoryTab'
 import { AccountSettingsModal } from '@/components/account/AccountSettingsModal'
 import { ExpenseChart } from '@/components/charts/ExpenseChart'
 import { IncomeChart } from '@/components/charts/IncomeChart'
+import { InventoryChart } from '@/components/charts/InventoryChart'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
 import { projectsService } from '@/lib/projects'
 import { incomeService, type Income } from '@/lib/income'
 import { expensesService, type Expense } from '@/lib/expenses'
+import { inventoryService } from '@/lib/inventory'
 import { formatCurrency } from '@/lib/currency'
 import { auth } from '@/lib/auth'
 import { permissions, type UserRole } from '@/lib/permissions'
@@ -33,6 +35,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
   const [project, setProject] = useState<any>(null)
   const [income, setIncome] = useState<Income[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [inventoryItems, setInventoryItems] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [currentUser, setCurrentUser] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<UserRole>('view')
@@ -103,9 +106,13 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
           projectsService.getUserRole(projectId, user.id),
         ])
 
+        // Cargar inventario por separado
+        const inventoryData = await inventoryService.getItemsWithQuantities(projectId)
+
         setProject(projectData)
         setIncome(incomeData)
         setExpenses(expensesData)
+        setInventoryItems(inventoryData)
         setUserRole(role as UserRole)
       } catch (error) {
         console.error('Error loading project data:', error)
@@ -315,8 +322,8 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         </div>
       </div>
 
-      {/* Mostrar las tarjetas de resumen en todas las pestañas EXCEPTO en Inventario */}
-      {activeTab !== 'inventory' && (
+      {/* Tarjetas de resumen OCULTAS - Solo mostrar en inventario si se necesita */}
+      {false && activeTab !== 'inventory' && (
         <div className={`grid gap-4 sm:gap-6 mb-4 sm:mb-6 ${userRole === 'view' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
           <Card>
             <CardHeader className="pb-2">
@@ -381,91 +388,63 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               />
             )}
 
+            {/* Tarjetas de resumen - Solo para admin/propietario */}
+            {(userRole === 'admin' || userRole === 'owner') && (
+              <div className="grid gap-4 sm:gap-6 mb-4 sm:mb-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatAmount(totalIncome)}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {income.length} ingresos
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      {formatCurrency(totalExpenses)}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {expenses.length} gastos
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatAmount(calculatedBalance)}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {calculatedBalance >= 0 ? 'Disponible' : 'Déficit'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             <div className={`grid gap-4 sm:gap-6 ${userRole === 'view' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
               <IncomeChart income={income} totalIncome={totalIncome} />
               <ExpenseChart expenses={expenses} totalExpenses={totalExpenses} />
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                    Ingresos Recientes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {income.slice(0, 3).map((incomeItem) => (
-                    <div key={incomeItem.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                      <div className="flex-1">
-                        <p className="font-medium text-green-600">
-                          {formatAmount(incomeItem.amount)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {incomeItem.category || 'Sin categoría'}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mt-1">
-                          <span>
-                            <strong>Realizado por:</strong> {incomeItem.performed_user?.full_name || incomeItem.performed_user?.email || 'Usuario desconocido'}
-                          </span>
-                          <span>
-                            <strong>Registrado por:</strong> {incomeItem.user?.full_name || incomeItem.user?.email || 'Usuario desconocido'}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-400">
-                        {new Date(incomeItem.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
-                  {income.length === 0 && (
-                    <p className="text-gray-500 text-center py-4">No hay ingresos registrados</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Receipt className="h-5 w-5" />
-                    Gastos Recientes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {expenses.slice(0, 3).map((expense) => (
-                    <div key={expense.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                      <div className="flex-1">
-                        <p className="font-medium text-red-600">
-                          -{formatAmount(expense.amount)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {expense.description}
-                        </p>
-                        {expense.category && (
-                          <p className="text-xs text-gray-400">
-                            {expense.category}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mt-1">
-                          <span>
-                            <strong>Realizado por:</strong> {expense.performed_user?.full_name || expense.performed_user?.email || (expense.performed_by === (user?.id || '') ? 'Tú' : 'Usuario desconocido')}
-                          </span>
-                          <span>
-                            <strong>Registrado por:</strong> {expense.user?.full_name || expense.user?.email || 'Usuario desconocido'}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-400">
-                        {new Date(expense.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
-                  {expenses.length === 0 && (
-                    <p className="text-gray-500 text-center py-4">No hay gastos registrados</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            {inventoryItems.length > 0 && (
+              <div className="mt-6">
+                <InventoryChart items={inventoryItems} showSummary={false} />
+              </div>
+            )}
+            {/* Ingresos y Gastos Recientes - OCULTOS TEMPORALMENTE */}
           </div>
         )}
 
@@ -477,6 +456,55 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                 onSuccess={handleIncomeUpdate}
               />
             )}
+            
+            {/* Tarjetas de resumen para Ingresos */}
+            <div className={`grid gap-4 sm:gap-6 mb-4 sm:mb-6 ${userRole === 'view' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">
+                    {formatAmount(totalIncome)}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {income.length} ingresos
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">
+                    {formatCurrency(totalExpenses)}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {expenses.length} gastos
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Solo mostrar Balance Final si el usuario NO es de vista */}
+              {userRole !== 'view' && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatAmount(calculatedBalance)}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {calculatedBalance >= 0 ? 'Disponible' : 'Déficit'}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+            
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-medium">Gestión de Ingresos</h2>
               {permissions.canEdit(userRole) && (
@@ -504,6 +532,55 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                 onSuccess={handleExpenseUpdate}
               />
             )}
+            
+            {/* Tarjetas de resumen para Gastos */}
+            <div className={`grid gap-4 sm:gap-6 mb-4 sm:mb-6 ${userRole === 'view' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">
+                    {formatAmount(totalIncome)}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {income.length} ingresos
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">
+                    {formatCurrency(totalExpenses)}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {expenses.length} gastos
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Solo mostrar Balance Final si el usuario NO es de vista */}
+              {userRole !== 'view' && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatAmount(calculatedBalance)}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {calculatedBalance >= 0 ? 'Disponible' : 'Déficit'}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+            
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-medium">Gestión de Gastos</h2>
               {permissions.canEdit(userRole) && (

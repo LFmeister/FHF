@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { inventoryService } from '@/lib/inventory'
 import { AddItemForm } from './AddItemForm'
 import { InventoryList } from './InventoryList'
+import { InventoryChart } from '@/components/charts/InventoryChart'
 import { permissions, type UserRole } from '@/lib/permissions'
 
 interface InventoryTabProps {
@@ -126,6 +127,13 @@ export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
 
       {showAdd && (
         <AddItemForm projectId={projectId} onSuccess={() => { setShowAdd(false); load() }} />
+      )}
+
+      {/* Gráficas de Inventario - Solo si hay datos */}
+      {items.length > 0 && (
+        <div className="mb-6">
+          <InventoryChart items={items} showCharts={false} />
+        </div>
       )}
 
       <InventoryList projectId={projectId} items={filteredItems as any} onUpdate={load} />

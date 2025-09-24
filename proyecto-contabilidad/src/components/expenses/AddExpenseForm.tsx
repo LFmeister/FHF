@@ -11,23 +11,14 @@ import { expensesService } from '@/lib/expenses'
 import { projectsService, type ProjectMember } from '@/lib/projects'
 import { supabase } from '@/lib/supabase'
 import { expenseSchema, type ExpenseFormData } from '@/lib/validations'
+import { categoriesService } from '@/lib/categories'
+import { CategoryManagerModal } from '@/components/categories/CategoryManagerModal'
 
 interface AddExpenseFormProps {
   projectId: string
   onSuccess?: () => void
 }
 
-const EXPENSE_CATEGORIES = [
-  'Materiales',
-  'Mano de obra',
-  'Transporte',
-  'Servicios',
-  'Equipos',
-  'Alimentación',
-  'Hospedaje',
-  'Combustible',
-  'Otros'
-]
 
 export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -36,6 +27,8 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
   const [uploadingFiles, setUploadingFiles] = useState(false)
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [currentUser, setCurrentUser] = useState<string | null>(null)
+  const [categories, setCategories] = useState<string[]>([])
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -49,6 +42,10 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
         // Get project members
         const membersData = await projectsService.getProjectMembers(projectId)
         setMembers(membersData)
+
+        // Get project categories (default + custom)
+        const categoriesData = await categoriesService.getProjectCategories(projectId, 'expense')
+        setCategories(categoriesData)
       } catch (error) {
         console.error('Error loading data:', error)
       }
@@ -56,6 +53,15 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
 
     loadData()
   }, [projectId])
+
+  const handleCategoriesUpdated = async () => {
+    try {
+      const categoriesData = await categoriesService.getProjectCategories(projectId, 'expense')
+      setCategories(categoriesData)
+    } catch (error) {
+      console.error('Error reloading categories:', error)
+    }
+  }
 
   const {
     register,
@@ -172,6 +178,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -202,7 +209,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                 {...register('category')}
               >
                 <option value="">Seleccionar categoría</option>
-                {EXPENSE_CATEGORIES.map(category => (
+                {categories.map((category: string) => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -211,6 +218,13 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
               {errors.category && (
                 <p className="text-sm text-destructive text-center">{errors.category.message}</p>
               )}
+              <button
+                type="button"
+                onClick={() => setShowCategoriesModal(true)}
+                className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                Gestionar categorías
+              </button>
             </div>
 
             <div className="space-y-2">
@@ -390,5 +404,15 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
         </form>
       </CardContent>
     </Card>
+
+    {/* Category Manager Modal */}
+    <CategoryManagerModal
+      projectId={projectId}
+      type="expense"
+      isOpen={showCategoriesModal}
+      onClose={() => setShowCategoriesModal(false)}
+      onCategoriesUpdated={handleCategoriesUpdated}
+    />
+    </>
   )
 }

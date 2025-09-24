@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { inventoryService, type InventoryItem, type InventoryFile } from '@/lib/inventory'
+import { formatCurrency } from '@/lib/currency'
 import { ImageModal } from './ImageModal'
 
 interface InventoryItemWithQty extends InventoryItem {
@@ -38,6 +39,8 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
     itemName: '',
     itemId: ''
   })
+  const [editingUnitValue, setEditingUnitValue] = useState<string | null>(null)
+  const [tempUnitValue, setTempUnitValue] = useState('')
 
   const totalByState = useMemo(() => {
     return items.reduce(
@@ -50,6 +53,51 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
       { bodega: 0, uso: 0, gastado: 0 }
     )
   }, [items])
+
+  const totalValueStock = useMemo(() => {
+    return items.reduce((sum, item) => {
+      const stockQty = item.qty_bodega + item.qty_uso // bodega + en uso (no gastado)
+      return sum + ((item.unit_value ?? 0) * stockQty)
+    }, 0)
+  }, [items])
+
+  // Format number with thousands separator (same as AddItemForm)
+  const formatNumber = (value: string) => {
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length > 3) {
+      return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+    }
+    return numbers
+  }
+
+  // Handle unit value editing
+  const startEditingUnitValue = (itemId: string, currentValue: number | null) => {
+    setEditingUnitValue(itemId)
+    setTempUnitValue(currentValue ? new Intl.NumberFormat('es-CO').format(currentValue) : '')
+  }
+
+  const handleUnitValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value
+    const formattedValue = formatNumber(inputValue)
+    setTempUnitValue(formattedValue)
+  }
+
+  const saveUnitValue = async (itemId: string) => {
+    try {
+      const numericValue = tempUnitValue ? parseInt(tempUnitValue.replace(/\./g, '')) : null
+      await inventoryService.updateItem(itemId, { unit_value: numericValue })
+      setEditingUnitValue(null)
+      setTempUnitValue('')
+      onUpdate?.()
+    } catch (err: any) {
+      alert(err.message || 'Error al actualizar el valor unitario')
+    }
+  }
+
+  const cancelEditingUnitValue = () => {
+    setEditingUnitValue(null)
+    setTempUnitValue('')
+  }
 
 
   const triggerReplaceImage = (itemId: string) => {
@@ -184,38 +232,88 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
               <thead>
                 <tr className="bg-gray-50 text-gray-700">
                   <th className="text-center p-2 border">Producto</th>
+                  <th className="text-center p-2 border">Valor unitario</th>
                   <th className="text-center p-2 border">En bodega</th>
                   <th className="text-center p-2 border">En uso</th>
                   <th className="text-center p-2 border">Gastado</th>
                   <th className="text-center p-2 border">Total</th>
+                  <th className="text-center p-2 border">Valor total (stock)</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item) => {
                   const total = item.qty_bodega + item.qty_uso + item.qty_gastado
+                  const stockQty = item.qty_bodega + item.qty_uso // bodega + en uso
+                  const rowTotalValue = (item.unit_value ?? 0) * stockQty
                   return (
                     <tr key={`sum-${item.id}`} className="odd:bg-white even:bg-gray-50">
                       <td className="p-2 border text-center">{item.name}</td>
+                      <td className="p-2 border text-center">
+                        {editingUnitValue === item.id ? (
+                          <div className="flex items-center gap-1">
+                            <div className="relative flex-1">
+                              <span className="absolute left-1 top-1 text-xs text-muted-foreground">$</span>
+                              <input
+                                type="text"
+                                className="w-full text-xs border rounded px-1 py-1 text-center"
+                                style={{ paddingLeft: '12px', paddingRight: '12px' }}
+                                value={tempUnitValue}
+                                onChange={handleUnitValueChange}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveUnitValue(item.id)
+                                  if (e.key === 'Escape') cancelEditingUnitValue()
+                                }}
+                                autoFocus
+                              />
+                            </div>
+                            <button
+                              onClick={() => saveUnitValue(item.id)}
+                              className="text-xs text-green-600 hover:text-green-800"
+                              title="Guardar"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={cancelEditingUnitValue}
+                              className="text-xs text-red-600 hover:text-red-800"
+                              title="Cancelar"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => startEditingUnitValue(item.id, item.unit_value)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            title="Click para editar valor unitario"
+                          >
+                            {item.unit_value != null ? formatCurrency(item.unit_value) : 'Agregar valor'}
+                          </button>
+                        )}
+                      </td>
                       <td className="p-2 border text-center">{item.qty_bodega}</td>
                       <td className="p-2 border text-center">{item.qty_uso}</td>
                       <td className="p-2 border text-center">{item.qty_gastado}</td>
                       <td className="p-2 border text-center font-medium">{total}</td>
+                      <td className="p-2 border text-center font-medium">{item.unit_value != null ? formatCurrency(rowTotalValue) : '-'}</td>
                     </tr>
                   )
                 })}
                 {items.length === 0 && (
                   <tr>
-                    <td className="p-2 border text-center text-gray-500" colSpan={5}>Sin datos</td>
+                    <td className="p-2 border text-center text-gray-500" colSpan={7}>Sin datos</td>
                   </tr>
                 )}
               </tbody>
               <tfoot>
                 <tr className="bg-gray-100 font-semibold">
                   <td className="p-2 border text-center">Totales</td>
+                  <td className="p-2 border text-center">-</td>
                   <td className="p-2 border text-center">{totalByState.bodega}</td>
                   <td className="p-2 border text-center">{totalByState.uso}</td>
                   <td className="p-2 border text-center">{totalByState.gastado}</td>
                   <td className="p-2 border text-center">{totalByState.bodega + totalByState.uso + totalByState.gastado}</td>
+                  <td className="p-2 border text-center">{formatCurrency(totalValueStock)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -250,6 +348,53 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                       {item.description && (
                         <p className="text-sm text-gray-500">{item.description}</p>
                       )}
+                      <div className="mt-1">
+                        {editingUnitValue === item.id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-600">Valor unitario:</span>
+                            <div className="relative flex-1">
+                              <span className="absolute left-2 top-1 text-xs text-muted-foreground">$</span>
+                              <input
+                                type="text"
+                                className="w-full text-sm border rounded px-2 py-1 text-center"
+                                style={{ paddingLeft: '20px', paddingRight: '20px' }}
+                                value={tempUnitValue}
+                                onChange={handleUnitValueChange}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveUnitValue(item.id)
+                                  if (e.key === 'Escape') cancelEditingUnitValue()
+                                }}
+                                autoFocus
+                              />
+                            </div>
+                            <button
+                              onClick={() => saveUnitValue(item.id)}
+                              className="text-sm text-green-600 hover:text-green-800"
+                              title="Guardar"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={cancelEditingUnitValue}
+                              className="text-sm text-red-600 hover:text-red-800"
+                              title="Cancelar"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-600">
+                            <strong>Valor unitario:</strong>{' '}
+                            <button
+                              onClick={() => startEditingUnitValue(item.id, item.unit_value)}
+                              className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                              title="Click para editar valor unitario"
+                            >
+                              {item.unit_value != null ? formatCurrency(item.unit_value) : 'Agregar valor'}
+                            </button>
+                          </p>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-2">
                         <span><strong>Bodega:</strong> {item.qty_bodega}</span>
                         <span><strong>En uso:</strong> {item.qty_uso}</span>

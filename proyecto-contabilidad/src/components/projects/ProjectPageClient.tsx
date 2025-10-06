@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, DollarSign, Receipt, Settings, ArrowLeft, BarChart3, TrendingUp, Users, Boxes, LogOut } from 'lucide-react'
+import { Plus, DollarSign, Receipt, Settings, ArrowLeft, BarChart3, TrendingUp, Users, Boxes, LogOut, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { AddIncomeForm } from '@/components/income/AddIncomeForm'
@@ -23,6 +23,10 @@ import { formatCurrency } from '@/lib/currency'
 import { auth } from '@/lib/auth'
 import { permissions, type UserRole } from '@/lib/permissions'
 import { ProjectMembers } from '@/components/projects/ProjectMembers'
+import { useToast } from '@/components/ui/Toast'
+import { AddLogbookEntryForm } from '@/components/logbook/AddLogbookEntryForm'
+import { LogbookList } from '@/components/logbook/LogbookList'
+import { logbookService, type LogbookEntry } from '@/lib/logbook'
 
 interface ProjectPageClientProps {
   projectId: string
@@ -31,11 +35,13 @@ interface ProjectPageClientProps {
 
 export default function ProjectPageClient({ projectId, initialTab }: ProjectPageClientProps) {
   const router = useRouter()
+  const { success: showSuccess } = useToast()
 
   const [project, setProject] = useState<any>(null)
   const [income, setIncome] = useState<Income[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [inventoryItems, setInventoryItems] = useState<any[]>([])
+  const [logbookEntries, setLogbookEntries] = useState<LogbookEntry[]>([])
   const [user, setUser] = useState<any>(null)
   const [currentUser, setCurrentUser] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<UserRole>('view')
@@ -45,6 +51,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
   const [activeTab, setActiveTab] = useState(initialTab || 'overview')
   const [showAddIncome, setShowAddIncome] = useState(false)
   const [showAddExpense, setShowAddExpense] = useState(false)
+  const [showAddLogbookEntry, setShowAddLogbookEntry] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
 
   useEffect(() => {
@@ -63,6 +70,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     }
     setShowAddIncome(false)
     setShowAddExpense(false)
+    setShowAddLogbookEntry(false)
   }
 
   const handleDeleteProject = () => {
@@ -106,13 +114,15 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
           projectsService.getUserRole(projectId, user.id),
         ])
 
-        // Cargar inventario por separado
+        // Cargar inventario y bitácora por separado
         const inventoryData = await inventoryService.getItemsWithQuantities(projectId)
+        const logbookData = await logbookService.getProjectEntries(projectId)
 
         setProject(projectData)
         setIncome(incomeData)
         setExpenses(expensesData)
         setInventoryItems(inventoryData)
+        setLogbookEntries(logbookData)
         setUserRole(role as UserRole)
       } catch (error) {
         console.error('Error loading project data:', error)
@@ -132,6 +142,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
       const incomeData = await incomeService.getProjectIncome(projectId)
       setIncome(incomeData)
       setShowAddIncome(false)
+      showSuccess('✅ Ingreso agregado exitosamente')
     } catch (error) {
       console.error('Error updating income:', error)
     }
@@ -142,8 +153,20 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
       const expensesData = await expensesService.getProjectExpenses(projectId)
       setExpenses(expensesData)
       setShowAddExpense(false)
+      showSuccess('✅ Gasto agregado exitosamente')
     } catch (error) {
       console.error('Error updating expenses:', error)
+    }
+  }
+
+  const handleLogbookUpdate = async () => {
+    try {
+      const logbookData = await logbookService.getProjectEntries(projectId)
+      setLogbookEntries(logbookData)
+      setShowAddLogbookEntry(false)
+      showSuccess('✅ Entrada de bitácora agregada exitosamente')
+    } catch (error) {
+      console.error('Error updating logbook entries:', error)
     }
   }
 
@@ -290,6 +313,18 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                 <span className="sm:hidden">Stock</span>
               </button>
             )}
+            <button
+              onClick={() => handleTabChange('logbook')}
+              className={`py-3 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
+                activeTab === 'logbook'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <BookOpen className="h-4 w-4 inline mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Bitácora ({logbookEntries.length})</span>
+              <span className="sm:hidden">Bitácora</span>
+            </button>
             {permissions.canManageMembers(userRole) && (
               <button
                 onClick={() => handleTabChange('members')}
@@ -450,61 +485,6 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
 
         {activeTab === 'income' && (
           <div className="space-y-6">
-            {showAddIncome && (
-              <AddIncomeForm
-                projectId={projectId}
-                onSuccess={handleIncomeUpdate}
-              />
-            )}
-            
-            {/* Tarjetas de resumen para Ingresos */}
-            <div className={`grid gap-4 sm:gap-6 mb-4 sm:mb-6 ${userRole === 'view' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatAmount(totalIncome)}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {income.length} ingresos
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(totalExpenses)}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {expenses.length} gastos
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Solo mostrar Balance Final si el usuario NO es de vista */}
-              {userRole !== 'view' && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatAmount(calculatedBalance)}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {calculatedBalance >= 0 ? 'Disponible' : 'Déficit'}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-            
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-medium">Gestión de Ingresos</h2>
               {permissions.canEdit(userRole) && (
@@ -514,6 +494,14 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                 </Button>
               )}
             </div>
+            
+            {showAddIncome && (
+              <AddIncomeForm
+                projectId={projectId}
+                onSuccess={handleIncomeUpdate}
+              />
+            )}
+            
             <IncomeList
               income={income}
               currentUserId={user?.id || ''}
@@ -526,61 +514,6 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
 
         {activeTab === 'expenses' && (
           <div className="space-y-6">
-            {showAddExpense && (
-              <AddExpenseForm
-                projectId={projectId}
-                onSuccess={handleExpenseUpdate}
-              />
-            )}
-            
-            {/* Tarjetas de resumen para Gastos */}
-            <div className={`grid gap-4 sm:gap-6 mb-4 sm:mb-6 ${userRole === 'view' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatAmount(totalIncome)}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {income.length} ingresos
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(totalExpenses)}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {expenses.length} gastos
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Solo mostrar Balance Final si el usuario NO es de vista */}
-              {userRole !== 'view' && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatAmount(calculatedBalance)}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {calculatedBalance >= 0 ? 'Disponible' : 'Déficit'}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-            
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-medium">Gestión de Gastos</h2>
               {permissions.canEdit(userRole) && (
@@ -590,6 +523,14 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                 </Button>
               )}
             </div>
+            
+            {showAddExpense && (
+              <AddExpenseForm
+                projectId={projectId}
+                onSuccess={handleExpenseUpdate}
+              />
+            )}
+            
             <ExpensesList
               expenses={expenses}
               currentUserId={user?.id || ''}
@@ -602,6 +543,32 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         {activeTab === 'inventory' && (
           <div className="space-y-6">
             <InventoryTab projectId={projectId} userRole={userRole} />
+          </div>
+        )}
+
+        {activeTab === 'logbook' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-medium">Bitácora del Proyecto</h2>
+              <Button onClick={() => setShowAddLogbookEntry(!showAddLogbookEntry)}>
+                <Plus className="h-4 w-4 mr-2" />
+                {showAddLogbookEntry ? 'Cancelar' : 'Nueva Entrada'}
+              </Button>
+            </div>
+
+            {showAddLogbookEntry && (
+              <AddLogbookEntryForm
+                projectId={projectId}
+                onSuccess={handleLogbookUpdate}
+              />
+            )}
+            
+            <LogbookList
+              entries={logbookEntries}
+              currentUserId={user?.id || ''}
+              userRole={userRole}
+              onUpdate={handleLogbookUpdate}
+            />
           </div>
         )}
 

@@ -7,6 +7,7 @@ import { Receipt, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+// import { useToast } from '@/components/ui/Toast'
 import { expensesService } from '@/lib/expenses'
 import { projectsService, type ProjectMember } from '@/lib/projects'
 import { supabase } from '@/lib/supabase'
@@ -29,6 +30,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
   const [currentUser, setCurrentUser] = useState<string | null>(null)
   const [categories, setCategories] = useState<string[]>([])
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
+  // Success toast is handled by parent after closing the form
 
   useEffect(() => {
     const loadData = async () => {

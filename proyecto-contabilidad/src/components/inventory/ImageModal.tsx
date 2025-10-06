@@ -3,7 +3,10 @@
 import { useState } from 'react'
 import { X, Upload, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useToast } from '@/components/ui/Toast'
 import { inventoryService } from '@/lib/inventory'
+import { useConfirm } from '@/hooks/useConfirm'
 
 interface ImageModalProps {
   isOpen: boolean
@@ -17,6 +20,8 @@ interface ImageModalProps {
 export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImageUpdated }: ImageModalProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const confirmDialog = useConfirm()
+  const { error: showError } = useToast()
 
   if (!isOpen) return null
 
@@ -35,7 +40,7 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
         onClose()
       } catch (error) {
         console.error('Error al reemplazar imagen:', error)
-        alert('Error al reemplazar la imagen')
+        showError('Error al reemplazar la imagen')
       } finally {
         setIsUploading(false)
       }
@@ -44,7 +49,15 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
   }
 
   const handleDeleteImage = async () => {
-    if (!confirm('¿Eliminar la imagen? Esta acción no se puede deshacer.')) return
+    const confirmed = await confirmDialog.confirm({
+      title: 'Eliminar Imagen',
+      message: '¿Estás seguro de que quieres eliminar esta imagen? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger'
+    })
+
+    if (!confirmed) return
     
     setIsDeleting(true)
     try {
@@ -53,7 +66,7 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
       onClose()
     } catch (error) {
       console.error('Error al eliminar imagen:', error)
-      alert('Error al eliminar la imagen')
+      showError('Error al eliminar la imagen')
     } finally {
       setIsDeleting(false)
     }
@@ -102,6 +115,18 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
           </Button>
         </div>
       </div>
+      
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        onClose={confirmDialog.handleCancel}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.options.title}
+        message={confirmDialog.options.message}
+        confirmText={confirmDialog.options.confirmText}
+        cancelText={confirmDialog.options.cancelText}
+        variant={confirmDialog.options.variant}
+      />
     </div>
   )
 }

@@ -5,9 +5,12 @@ import { Upload, Image as ImageIcon, ChevronDown, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useToast } from '@/components/ui/Toast'
 import { inventoryService, type InventoryItem, type InventoryFile } from '@/lib/inventory'
 import { formatCurrency } from '@/lib/currency'
 import { ImageModal } from './ImageModal'
+import { useConfirm } from '@/hooks/useConfirm'
 
 interface InventoryItemWithQty extends InventoryItem {
   files?: InventoryFile[]
@@ -41,6 +44,8 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
   })
   const [editingUnitValue, setEditingUnitValue] = useState<string | null>(null)
   const [tempUnitValue, setTempUnitValue] = useState('')
+  const confirmDialog = useConfirm()
+  const { toasts, removeToast, error: showError } = useToast()
 
   const totalByState = useMemo(() => {
     return items.reduce(
@@ -90,7 +95,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
       setTempUnitValue('')
       onUpdate?.()
     } catch (err: any) {
-      alert(err.message || 'Error al actualizar el valor unitario')
+      showError(err.message || 'Error al actualizar el valor unitario')
     }
   }
 
@@ -120,13 +125,22 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
   }
 
   const handleDelete = async (itemId: string) => {
-    if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return
+    const confirmed = await confirmDialog.confirm({
+      title: 'Eliminar Producto',
+      message: '¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger'
+    })
+
+    if (!confirmed) return
+
     setDeletingId(itemId)
     try {
       await inventoryService.deleteItem(itemId)
       onUpdate?.()
     } catch (e: any) {
-      alert(e.message || 'Error al eliminar el producto')
+      showError(e.message || 'Error al eliminar el producto')
     } finally {
       setDeletingId(null)
     }
@@ -178,7 +192,10 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
     const input = qtyInputs[item.id] || { add: '', toUse: '', toSpent: '' }
     const qtyStr = kind === 'add' ? input.add : kind === 'toUse' ? input.toUse : input.toSpent
     const qty = parseInt(qtyStr, 10)
-    if (!qty || qty <= 0) return alert('Ingresa una cantidad válida')
+    if (!qty || qty <= 0) {
+      showError('Ingresa una cantidad válida')
+      return
+    }
 
     try {
       if (kind === 'add') {
@@ -188,14 +205,20 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
           to_state: 'bodega',
         })
       } else if (kind === 'toUse') {
-        if (qty > item.qty_bodega) return alert('Cantidad supera lo disponible en bodega')
+        if (qty > item.qty_bodega) {
+          showError('Cantidad supera lo disponible en bodega')
+          return
+        }
         await inventoryService.createMovement(item.id, projectId, {
           quantity: qty,
           from_state: 'bodega',
           to_state: 'uso',
         })
       } else {
-        if (qty > item.qty_uso) return alert('Cantidad supera lo disponible en uso')
+        if (qty > item.qty_uso) {
+          showError('Cantidad supera lo disponible en uso')
+          return
+        }
         await inventoryService.createMovement(item.id, projectId, {
           quantity: qty,
           from_state: 'uso',
@@ -205,15 +228,19 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
       onUpdate?.()
       setQtyInputs(prev => ({ ...prev, [item.id]: { add: '', toUse: '', toSpent: '' } }))
     } catch (err: any) {
-      alert(err.message || 'Error al registrar movimiento')
+      showError(err.message || 'Error al registrar movimiento')
     }
   }
 
   if (items.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-sm text-gray-500">
-          No hay productos en inventario.
+        <CardContent className="py-12">
+          <div className="flex flex-col items-center justify-center text-gray-500">
+            <Upload className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="text-lg font-medium">No hay productos en inventario</p>
+            <p className="text-sm mt-1">Comienza agregando productos al inventario</p>
+          </div>
         </CardContent>
       </Card>
     )
@@ -490,6 +517,19 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
         itemId={imageModal.itemId}
         onImageUpdated={onUpdate}
       />
+      
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        onClose={confirmDialog.handleCancel}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.options.title}
+        message={confirmDialog.options.message}
+        confirmText={confirmDialog.options.confirmText}
+        cancelText={confirmDialog.options.cancelText}
+        variant={confirmDialog.options.variant}
+      />
+      
     </div>
   )
 }

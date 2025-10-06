@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { inventoryService } from '@/lib/inventory'
 import { AddItemForm } from './AddItemForm'
 import { InventoryList } from './InventoryList'
+import { useToast } from '@/components/ui/Toast'
 import { InventoryChart } from '@/components/charts/InventoryChart'
 import { permissions, type UserRole } from '@/lib/permissions'
 
@@ -17,6 +18,7 @@ interface InventoryTabProps {
 }
 
 export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
+  const { success: showSuccess } = useToast()
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [items, setItems] = useState<any[]>([])
@@ -126,7 +128,7 @@ export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
       </div>
 
       {showAdd && (
-        <AddItemForm projectId={projectId} onSuccess={() => { setShowAdd(false); load() }} />
+        <AddItemForm projectId={projectId} onSuccess={() => { setShowAdd(false); load(); showSuccess('✅ Producto agregado exitosamente') }} />
       )}
 
       {/* Gráficas de Inventario - Solo si hay datos */}

@@ -4,9 +4,12 @@ import { useState } from 'react'
 import { Trash2, Edit, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useToast } from '@/components/ui/Toast'
 import { incomeService, type Income } from '@/lib/income'
 import { formatCurrency } from '@/lib/currency'
 import { permissions, type UserRole } from '@/lib/permissions'
+import { useConfirm } from '@/hooks/useConfirm'
 
 interface IncomeListProps {
   income: Income[]
@@ -17,11 +20,19 @@ interface IncomeListProps {
 
 export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate }: IncomeListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const confirmDialog = useConfirm()
+  const { error: showError } = useToast()
 
   const handleDelete = async (incomeId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este ingreso?')) {
-      return
-    }
+    const confirmed = await confirmDialog.confirm({
+      title: 'Eliminar Ingreso',
+      message: '¿Estás seguro de que quieres eliminar este ingreso? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger'
+    })
+
+    if (!confirmed) return
 
     try {
       setDeletingId(incomeId)
@@ -29,7 +40,7 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
       onUpdate?.()
     } catch (error) {
       console.error('Error deleting income:', error)
-      alert('Error al eliminar el ingreso')
+      showError('Error al eliminar el ingreso')
     } finally {
       setDeletingId(null)
     }
@@ -114,6 +125,17 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
           </CardContent>
         </Card>
       ))}
+      
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        onClose={confirmDialog.handleCancel}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.options.title}
+        message={confirmDialog.options.message}
+        confirmText={confirmDialog.options.confirmText}
+        cancelText={confirmDialog.options.cancelText}
+        variant={confirmDialog.options.variant}
+      />
     </div>
   )
 }

@@ -5,9 +5,11 @@ import { Trash2, Download, Eye, Calendar, User, Tag, Paperclip, Receipt, Upload 
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { FilePreviewModal } from '@/components/ui/FilePreviewModal'
-import { useToast, ToastManager } from '@/components/ui/Toast'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useToast } from '@/components/ui/Toast'
 import { expensesService, type Expense } from '@/lib/expenses'
 import { permissions, type UserRole } from '@/lib/permissions'
+import { useConfirm } from '@/hooks/useConfirm'
 
 interface ExpensesListProps {
   expenses: Expense[]
@@ -20,7 +22,8 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [expandedExpense, setExpandedExpense] = useState<string | null>(null)
   const [uploadingToExpense, setUploadingToExpense] = useState<string | null>(null)
-  const { toasts, removeToast, success, error } = useToast()
+  const { toasts, removeToast, success, error: showError } = useToast()
+  const confirmDialog = useConfirm()
   const [previewFile, setPreviewFile] = useState<{
     id: string
     file_name: string
@@ -30,7 +33,15 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
   } | null>(null)
 
   const handleDelete = async (expenseId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este gasto?')) return
+    const confirmed = await confirmDialog.confirm({
+      title: 'Eliminar Gasto',
+      message: '¿Estás seguro de que quieres eliminar este gasto? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger'
+    })
+
+    if (!confirmed) return
 
     setDeletingId(expenseId)
     try {
@@ -38,7 +49,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
       onUpdate?.()
     } catch (error) {
       console.error('Error deleting expense:', error)
-      alert('Error al eliminar el gasto')
+      showError('Error al eliminar el gasto')
     } finally {
       setDeletingId(null)
     }
@@ -55,7 +66,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
       document.body.removeChild(link)
     } catch (error) {
       console.error('Error downloading file:', error)
-      alert('Error al descargar el archivo')
+      showError('Error al descargar el archivo')
     }
   }
 
@@ -69,7 +80,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
       success(`✅ ${files.length} archivo${files.length > 1 ? 's' : ''} subido${files.length > 1 ? 's' : ''} exitosamente`)
     } catch (uploadError) {
       console.error('Error uploading files:', uploadError)
-      error('❌ Error al subir los archivos. Inténtalo nuevamente.')
+      showError('❌ Error al subir los archivos. Inténtalo nuevamente.')
     } finally {
       setUploadingToExpense(null)
     }
@@ -342,8 +353,18 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
         file={previewFile}
       />
       
-      {/* Toast Notifications */}
-      <ToastManager toasts={toasts} removeToast={removeToast} />
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        onClose={confirmDialog.handleCancel}
+        onConfirm={confirmDialog.handleConfirm}
+        title={confirmDialog.options.title}
+        message={confirmDialog.options.message}
+        confirmText={confirmDialog.options.confirmText}
+        cancelText={confirmDialog.options.cancelText}
+        variant={confirmDialog.options.variant}
+      />
+      
     </div>
   )
 }

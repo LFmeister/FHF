@@ -8,6 +8,7 @@ import { PackagePlus, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+// import { useToast } from '@/components/ui/Toast'
 import { inventoryService } from '@/lib/inventory'
 
 const schema = z.object({
@@ -51,6 +52,7 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [displayUnitValue, setDisplayUnitValue] = useState('')
   const [displayPackageValue, setDisplayPackageValue] = useState('')
+  // Success toast is handled by parent after closing the form
 
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),

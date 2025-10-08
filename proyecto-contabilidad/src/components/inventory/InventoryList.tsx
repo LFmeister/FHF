@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Upload, Image as ImageIcon, ChevronDown, Trash2 } from 'lucide-react'
+import { Upload, Image as ImageIcon, ChevronDown, Trash2, Edit } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { inventoryService, type InventoryItem, type InventoryFile } from '@/lib/inventory'
 import { formatCurrency } from '@/lib/currency'
 import { ImageModal } from './ImageModal'
+import { EditItemModal } from './EditItemModal'
 import { useConfirm } from '@/hooks/useConfirm'
 
 interface InventoryItemWithQty extends InventoryItem {
@@ -44,6 +45,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
   })
   const [editingUnitValue, setEditingUnitValue] = useState<string | null>(null)
   const [tempUnitValue, setTempUnitValue] = useState('')
+  const [editingItem, setEditingItem] = useState<InventoryItemWithQty | null>(null)
   const confirmDialog = useConfirm()
   const { toasts, removeToast, error: showError } = useToast()
 
@@ -368,88 +370,98 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                     <ImageIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
-                    <div>
-                      <p className="font-semibold text-gray-900">{item.name}</p>
-                      {item.description && (
-                        <p className="text-sm text-gray-500">{item.description}</p>
-                      )}
-                      <div className="mt-1">
-                        {editingUnitValue === item.id ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-600">Valor unitario:</span>
-                            <div className="relative flex-1">
-                              <span className="absolute left-2 top-1 text-xs text-muted-foreground">$</span>
-                              <input
-                                type="text"
-                                className="w-full text-sm border rounded px-2 py-1 text-center"
-                                style={{ paddingLeft: '20px', paddingRight: '20px' }}
-                                value={tempUnitValue}
-                                onChange={handleUnitValueChange}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveUnitValue(item.id)
-                                  if (e.key === 'Escape') cancelEditingUnitValue()
-                                }}
-                                autoFocus
-                              />
-                            </div>
-                            <button
-                              onClick={() => saveUnitValue(item.id)}
-                              className="text-sm text-green-600 hover:text-green-800"
-                              title="Guardar"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={cancelEditingUnitValue}
-                              className="text-sm text-red-600 hover:text-red-800"
-                              title="Cancelar"
-                            >
-                              ✕
-                            </button>
+                <div className="flex-1 min-w-0 relative">
+                  {/* Botones de acción - Fijos en la parte superior derecha */}
+                  <div className="flex flex-wrap items-start justify-end gap-1 sm:gap-2 mb-2 sm:mb-0 sm:absolute sm:top-0 sm:right-0">
+                    <Button variant="ghost" size="sm" onClick={() => setMovementsOpen(prev => ({ ...prev, [item.id]: !prev[item.id] }))}>
+                      <span className="hidden sm:inline">{movementsOpen[item.id] ? 'Ocultar movimientos' : 'Movimientos'}</span>
+                      <span className="sm:hidden text-xs">{movementsOpen[item.id] ? 'Ocultar' : 'Movimientos'}</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => triggerReplaceImage(item.id)} disabled={uploadingFor === item.id}>
+                      <Upload className="h-4 w-4 sm:mr-1" /> 
+                      <span className="hidden sm:inline">{uploadingFor === item.id ? 'Subiendo...' : 'Reemplazar imagen'}</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setExpanded(prev => ({ ...prev, [item.id]: !prev[item.id] }))}>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${expanded[item.id] ? 'rotate-180' : ''}`} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                      onClick={() => setEditingItem(item)}
+                      title="Editar producto"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                      onClick={() => handleDelete(item.id)}
+                      disabled={deletingId === item.id}
+                      title="Eliminar producto"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Contenido del producto - Se expande hacia abajo sin mover los botones */}
+                  <div className="sm:pr-2">
+                    <p className="font-semibold text-gray-900 sm:max-w-[calc(100%-34rem)]">{item.name}</p>
+                    {item.description && (
+                      <p className="text-sm text-gray-500 mt-1 break-words sm:max-w-[calc(100%-34rem)]">{item.description}</p>
+                    )}
+                    <div className="mt-1">
+                      {editingUnitValue === item.id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-600">Valor unitario:</span>
+                          <div className="relative flex-1 max-w-[200px]">
+                            <span className="absolute left-2 top-1 text-xs text-muted-foreground">$</span>
+                            <input
+                              type="text"
+                              className="w-full text-sm border rounded px-2 py-1 text-center"
+                              style={{ paddingLeft: '20px', paddingRight: '20px' }}
+                              value={tempUnitValue}
+                              onChange={handleUnitValueChange}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveUnitValue(item.id)
+                                if (e.key === 'Escape') cancelEditingUnitValue()
+                              }}
+                              autoFocus
+                            />
                           </div>
-                        ) : (
-                          <p className="text-sm text-gray-600">
-                            <strong>Valor unitario:</strong>{' '}
-                            <button
-                              onClick={() => startEditingUnitValue(item.id, item.unit_value)}
-                              className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                              title="Click para editar valor unitario"
-                            >
-                              {item.unit_value != null ? formatCurrency(item.unit_value) : 'Agregar valor'}
-                            </button>
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-2">
-                        <span><strong>Bodega:</strong> {item.qty_bodega}</span>
-                        <span><strong>En uso:</strong> {item.qty_uso}</span>
-                        <span><strong>Gastado:</strong> {item.qty_gastado}</span>
-                      </div>
+                          <button
+                            onClick={() => saveUnitValue(item.id)}
+                            className="text-sm text-green-600 hover:text-green-800"
+                            title="Guardar"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEditingUnitValue}
+                            className="text-sm text-red-600 hover:text-red-800"
+                            title="Cancelar"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-600">
+                          <strong>Valor unitario:</strong>{' '}
+                          <button
+                            onClick={() => startEditingUnitValue(item.id, item.unit_value)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                            title="Click para editar valor unitario"
+                          >
+                            {item.unit_value != null ? formatCurrency(item.unit_value) : 'Agregar valor'}
+                          </button>
+                        </p>
+                      )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setMovementsOpen(prev => ({ ...prev, [item.id]: !prev[item.id] }))}>
-                        <span className="hidden sm:inline">{movementsOpen[item.id] ? 'Ocultar movimientos' : 'Movimientos'}</span>
-                        <span className="sm:hidden text-xs">{movementsOpen[item.id] ? 'Ocultar' : 'Movimientos'}</span>
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => triggerReplaceImage(item.id)} disabled={uploadingFor === item.id}>
-                        <Upload className="h-4 w-4 sm:mr-1" /> 
-                        <span className="hidden sm:inline">{uploadingFor === item.id ? 'Subiendo...' : 'Reemplazar imagen'}</span>
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setExpanded(prev => ({ ...prev, [item.id]: !prev[item.id] }))}>
-                        <ChevronDown className={`h-4 w-4 transition-transform ${expanded[item.id] ? 'rotate-180' : ''}`} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                        onClick={() => handleDelete(item.id)}
-                        disabled={deletingId === item.id}
-                        title="Eliminar producto"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-2">
+                      <span><strong>Bodega:</strong> {item.qty_bodega}</span>
+                      <span><strong>En uso:</strong> {item.qty_uso}</span>
+                      <span><strong>Gastado:</strong> {item.qty_gastado}</span>
                     </div>
                   </div>
 
@@ -516,6 +528,17 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
         itemName={imageModal.itemName}
         itemId={imageModal.itemId}
         onImageUpdated={onUpdate}
+      />
+      
+      {/* Modal de edición */}
+      <EditItemModal
+        item={editingItem}
+        isOpen={!!editingItem}
+        onClose={() => setEditingItem(null)}
+        onSuccess={() => {
+          onUpdate?.()
+          setEditingItem(null)
+        }}
       />
       
       {/* Confirm Modal */}

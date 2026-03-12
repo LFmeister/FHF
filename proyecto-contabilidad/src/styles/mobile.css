@@ -1,104 +1,37 @@
-/* Estilos para mejorar la experiencia móvil */
+/* Mobile helpers */
 
-/* Ocultar scrollbar horizontal pero mantener funcionalidad */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Safari and Chrome */
+  display: none;
 }
 
-/* Mejorar el touch en móviles */
 @media (max-width: 640px) {
-  /* Aumentar área de toque para botones pequeños */
-  button {
-    min-height: 44px;
-    min-width: 44px;
-  }
-  
-  /* Prevenir scroll horizontal no deseado */
   body {
     overflow-x: hidden;
   }
-  
-  /* Mejorar navegación de tabs */
-  .tab-navigation {
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-  
-  .tab-button {
-    min-width: fit-content;
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-  
-  /* Mejorar espaciado en formularios */
-  input, select, textarea {
-    font-size: 16px; /* Previene zoom en iOS */
-  }
-  
-  /* Optimizaciones específicas para páginas de auth */
-  .auth-page {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  
-  /* Mejorar inputs en formularios de auth */
-  .auth-input {
-    min-height: 48px;
+
+  input,
+  select,
+  textarea {
     font-size: 16px;
   }
-  
-  /* Botones más grandes en móviles */
-  .auth-button {
-    min-height: 48px;
-    font-size: 16px;
+
+  button {
+    min-height: 42px;
   }
-  
-  /* Mejorar tablas en móviles */
-  table {
-    font-size: 14px;
-  }
-  
-  th, td {
-    padding: 8px 4px !important;
-    white-space: nowrap;
-  }
-  
-  /* Mejorar cards en móviles */
-  .card-mobile {
-    margin: 0 -16px;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-  }
-  
-  /* Mejorar modales en móviles */
-  .modal-mobile {
-    margin: 16px;
-    max-height: calc(100vh - 32px);
+
+  .touch-card {
+    border-radius: 16px;
   }
 }
 
-/* Estilos para pantallas muy pequeñas */
 @media (max-width: 375px) {
-  /* Reducir padding en contenedores principales */
   .container-mobile {
     padding-left: 12px;
     padding-right: 12px;
-  }
-  
-  /* Texto más pequeño en elementos secundarios */
-  .text-mobile-sm {
-    font-size: 12px;
-  }
-  
-  /* Botones más compactos */
-  .btn-mobile-compact {
-    padding: 6px 12px;
-    font-size: 14px;
   }
 }

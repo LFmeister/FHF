@@ -3,21 +3,23 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Lock, CheckCircle, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { auth } from '@/lib/auth'
+import { AuthShell } from '@/components/auth/AuthShell'
 import { z } from 'zod'
 
-const resetPasswordSchema = z.object({
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Las contraseñas no coinciden',
-  path: ['confirmPassword'],
-})
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(6, 'La contrasena debe tener al menos 6 caracteres'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Las contrasenas no coinciden',
+    path: ['confirmPassword'],
+  })
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
 
@@ -29,7 +31,6 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false)
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   const {
     register,
@@ -48,7 +49,6 @@ export default function ResetPasswordPage() {
         setIsValidSession(false)
       }
     }
-
     checkSession()
   }, [])
 
@@ -58,191 +58,120 @@ export default function ResetPasswordPage() {
 
     try {
       const { error: updateError } = await auth.updatePassword(data.password)
-
       if (updateError) {
         setError(updateError.message)
         return
       }
 
       setSuccess(true)
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 3000)
+      setTimeout(() => router.push('/dashboard'), 2500)
     } catch (err) {
-      setError('Error inesperado. Por favor, intenta de nuevo.')
+      setError('Error inesperado. Intenta nuevamente.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (isValidSession === null) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4 text-sm text-gray-600">Verificando sesión...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (isValidSession === false) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <XCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
-            <CardTitle className="text-xl">Enlace Inválido</CardTitle>
-            <CardDescription>
-              El enlace de recuperación de contraseña ha expirado o no es válido.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-sm text-red-700 bg-red-50 p-3 rounded-lg">
-                <p className="font-medium mb-1">¿Qué puedes hacer?</p>
-                <ul className="text-left space-y-1">
-                  <li>• Solicita un nuevo enlace de recuperación</li>
-                  <li>• Verifica que el enlace esté completo</li>
-                  <li>• Contacta al soporte si el problema persiste</li>
-                </ul>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button 
-                  variant="outline"
-                  onClick={() => router.push('/auth/login')}
-                  className="flex-1"
-                >
-                  Ir al Login
-                </Button>
-                <Button 
-                  onClick={() => router.push('/auth/forgot-password')}
-                  className="flex-1"
-                >
-                  Recuperar Contraseña
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
-            <CardTitle className="text-xl">¡Contraseña Actualizada!</CardTitle>
-            <CardDescription>
-              Tu contraseña ha sido cambiada exitosamente.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center space-y-4">
-              <div className="text-sm text-green-700 bg-green-50 p-3 rounded-lg">
-                <p>Serás redirigido al dashboard automáticamente...</p>
-              </div>
-              <Button 
-                onClick={() => router.push('/dashboard')}
-                className="w-full"
-              >
-                Ir al Dashboard
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Nueva Contraseña</CardTitle>
-          <CardDescription className="text-center">
-            Ingresa tu nueva contraseña para completar la recuperación
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {error && (
-              <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-                {error}
-              </div>
-            )}
+    <AuthShell
+      title="Restablecer contrasena"
+      subtitle="Crea una nueva clave segura para tu cuenta."
+      backHref="/auth/login"
+      backLabel="volver al login"
+    >
+      {isValidSession === null && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary-300 border-t-primary-700" />
+          <p className="mt-3 text-sm text-slate-600">Verificando sesion...</p>
+        </div>
+      )}
 
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Nueva Contraseña
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  className="pl-10 pr-10"
-                  error={errors.password?.message}
-                  {...register('password')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff /> : <Eye />}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-medium">
-                Confirmar Nueva Contraseña
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  className="pl-10 pr-10"
-                  error={errors.confirmPassword?.message}
-                  {...register('confirmPassword')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground"
-                >
-                  {showConfirmPassword ? <EyeOff /> : <Eye />}
-                </button>
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full" loading={isLoading}>
-              Actualizar Contraseña
+      {isValidSession === false && (
+        <div className="space-y-4 rounded-2xl border border-red-200 bg-red-50 p-5">
+          <div className="flex items-center gap-2 text-red-700">
+            <XCircle className="h-5 w-5" />
+            <p className="font-semibold">Enlace invalido o expirado</p>
+          </div>
+          <p className="text-sm text-red-700">Solicita un nuevo enlace para recuperar el acceso.</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="outline" onClick={() => router.push('/auth/login')}>
+              Ir al login
             </Button>
+            <Button onClick={() => router.push('/auth/forgot-password')}>Solicitar nuevo enlace</Button>
+          </div>
+        </div>
+      )}
 
-            <div className="text-center text-sm">
+      {isValidSession && success && (
+        <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <div className="flex items-center gap-2 text-emerald-700">
+            <CheckCircle className="h-5 w-5" />
+            <p className="font-semibold">Contrasena actualizada</p>
+          </div>
+          <p className="text-sm text-emerald-800">Listo. Te redirigiremos al panel en unos segundos.</p>
+          <Button className="w-full" onClick={() => router.push('/dashboard')}>
+            Ir al dashboard
+          </Button>
+        </div>
+      )}
+
+      {isValidSession && !success && (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+          <div className="space-y-1.5">
+            <label htmlFor="password" className="text-sm font-semibold text-slate-700">
+              Nueva contrasena
+            </label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="********"
+                className="pl-10 pr-10"
+                error={errors.password?.message}
+                {...register('password')}
+              />
               <button
                 type="button"
-                onClick={() => router.push('/auth/login')}
-                className="text-primary hover:underline"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700"
               >
-                Volver al login
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="confirmPassword" className="text-sm font-semibold text-slate-700">
+              Confirmar contrasena
+            </label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="********"
+                className="pl-10 pr-10"
+                error={errors.confirmPassword?.message}
+                {...register('confirmPassword')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full" size="lg" loading={isLoading}>
+            Actualizar contrasena
+          </Button>
+        </form>
+      )}
+    </AuthShell>
   )
 }

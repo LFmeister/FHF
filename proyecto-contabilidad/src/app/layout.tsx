@@ -3,8 +3,8 @@ import './globals.css'
 import { ToastProvider } from '@/components/ui/Toast'
 
 export const metadata: Metadata = {
-  title: 'Meister Manager',
-  description: 'Sistema de gestión contable para proyectos colaborativos',
+  title: 'Meister Manager | Control de Proyectos',
+  description: 'Plataforma de control contable y bitacora para equipos de proyecto.',
 }
 
 export default function RootLayout({
@@ -15,9 +15,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   )

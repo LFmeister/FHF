@@ -4,10 +4,9 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
-import { Mail, ArrowLeft } from 'lucide-react'
+import { Mail, ArrowLeft, Send } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { auth } from '@/lib/auth'
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations'
 
@@ -30,15 +29,13 @@ export function ForgotPasswordForm() {
 
     try {
       const { error: authError } = await auth.resetPassword(data.email)
-
       if (authError) {
         setError(authError.message)
         return
       }
-
       setSuccess(true)
     } catch (err) {
-      setError('Error inesperado. Por favor, intenta de nuevo.')
+      setError('Error inesperado. Intenta nuevamente.')
     } finally {
       setIsLoading(false)
     }
@@ -46,73 +43,46 @@ export function ForgotPasswordForm() {
 
   if (success) {
     return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-              <Mail className="w-8 h-8 text-blue-600" />
-            </div>
-            <h2 className="text-xl font-semibold">Email Enviado</h2>
-            <p className="text-muted-foreground">
-              Revisa tu email para las instrucciones de recuperación de contraseña.
-            </p>
-            <Link href="/auth/login">
-              <Button variant="outline" className="w-full">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver al Login
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
+        <div className="flex items-center gap-2">
+          <Send className="h-5 w-5" />
+          <p className="font-semibold">Correo enviado</p>
+        </div>
+        <p>Te enviamos un enlace de recuperacion. Revisa tambien la carpeta de spam.</p>
+        <Link href="/auth/login">
+          <Button variant="outline" className="w-full">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver al login
+          </Button>
+        </Link>
+      </div>
     )
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">Recuperar Contraseña</CardTitle>
-        <CardDescription className="text-center">
-          Ingresa tu email para recibir instrucciones de recuperación
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-              {error}
-            </div>
-          )}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                className="pl-10"
-                error={errors.email?.message}
-                {...register('email')}
-              />
-            </div>
-          </div>
+      <div className="space-y-1.5">
+        <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+          Email de tu cuenta
+        </label>
+        <div className="relative">
+          <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input id="email" type="email" placeholder="tu@email.com" className="pl-10" error={errors.email?.message} {...register('email')} />
+        </div>
+      </div>
 
-          <Button type="submit" className="w-full" loading={isLoading}>
-            Enviar Instrucciones
-          </Button>
+      <Button type="submit" className="w-full" size="lg" loading={isLoading}>
+        Enviar instrucciones
+      </Button>
 
-          <div className="text-center">
-            <Link href="/auth/login" className="text-sm text-primary hover:underline">
-              <ArrowLeft className="w-4 h-4 inline mr-1" />
-              Volver al Login
-            </Link>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-sm text-slate-600">
+        <Link href="/auth/login" className="inline-flex items-center gap-1 font-semibold text-primary-700 hover:text-primary-900">
+          <ArrowLeft className="h-4 w-4" />
+          Volver al login
+        </Link>
+      </div>
+    </form>
   )
 }

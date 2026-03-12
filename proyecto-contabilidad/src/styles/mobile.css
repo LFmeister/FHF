@@ -1,4 +1,4 @@
-/* Mobile helpers */
+/* Mobile tuning */
 
 .scrollbar-hide {
   -ms-overflow-style: none;
@@ -7,6 +7,12 @@
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+@media (max-width: 900px) {
+  .auth-panel {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -22,10 +28,6 @@
 
   button {
     min-height: 42px;
-  }
-
-  .touch-card {
-    border-radius: 16px;
   }
 }
 

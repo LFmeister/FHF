@@ -71,8 +71,8 @@ export function AuthGuard({ children, requireEmailConfirmation = true }: AuthGua
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      <div className="flex min-h-screen items-center justify-center auth-shell">
+        <div className="h-20 w-20 animate-spin rounded-full border-4 border-primary-200 border-t-primary-700" />
       </div>
     )
   }

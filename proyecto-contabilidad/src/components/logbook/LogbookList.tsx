@@ -14,10 +14,9 @@ import {
   ChevronUp,
   Image as ImageIcon,
   Search,
-  Clock3,
   Filter,
+  Rows,
   GalleryHorizontal,
-  FileText,
 } from 'lucide-react'
 import { permissions, type UserRole } from '@/lib/permissions'
 import { useConfirm } from '@/hooks/useConfirm'
@@ -85,7 +84,7 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
 
   const handleDelete = async (entryId: string) => {
     const confirmed = await confirmDialog.confirm({
-      title: 'Eliminar entrada de bitacora',
+      title: 'Eliminar entrada',
       message: 'Esta accion es permanente. Deseas continuar?',
       confirmText: 'Eliminar',
       cancelText: 'Cancelar',
@@ -118,7 +117,7 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
           <div className="flex flex-col items-center justify-center text-slate-500">
             <GalleryHorizontal className="mb-3 h-12 w-12 opacity-50" />
             <p className="text-lg font-semibold text-slate-800">Bitacora vacia</p>
-            <p className="mt-1 text-sm">Comienza a documentar el progreso del proyecto.</p>
+            <p className="mt-1 text-sm">Comienza a documentar avances del proyecto.</p>
           </div>
         </CardContent>
       </Card>
@@ -131,7 +130,7 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Buscar registro</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Buscar en bitacora</label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
@@ -163,17 +162,17 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Entradas visibles</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Entradas</p>
               <p className="mt-1 text-xl font-bold text-slate-900">{filteredEntries.length}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Con evidencia</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Con imagenes</p>
               <p className="mt-1 text-xl font-bold text-slate-900">
                 {filteredEntries.filter((entry) => (entry.images?.length || 0) > 0).length}
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Total imagenes</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Imagenes</p>
               <p className="mt-1 text-xl font-bold text-slate-900">{totalImages}</p>
             </div>
           </div>
@@ -182,133 +181,108 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
 
       {groupedEntries.length === 0 ? (
         <Card className="rounded-2xl border border-slate-200 bg-white">
-          <CardContent className="py-14">
-            <div className="text-center text-slate-600">
-              <p className="text-lg font-semibold text-slate-800">Sin resultados</p>
-              <p className="mt-1 text-sm">Ajusta el filtro o la busqueda para ver entradas.</p>
-            </div>
+          <CardContent className="py-14 text-center">
+            <p className="text-lg font-semibold text-slate-800">Sin resultados</p>
+            <p className="mt-1 text-sm text-slate-600">Ajusta el filtro o la busqueda.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {groupedEntries.map((group) => (
-            <div key={group.key} className="space-y-3">
-              <div className="sticky top-[72px] z-10 inline-flex rounded-full border border-slate-200 bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 backdrop-blur">
-                {group.label}
+            <section key={group.key} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">{group.label}</h3>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  <Rows className="h-3.5 w-3.5" />
+                  {group.data.length} entradas
+                </span>
               </div>
 
-              <div className="relative ml-2 space-y-4 border-l border-slate-200 pl-5">
+              <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
                 {group.data.map((entry) => {
                   const hasImages = Boolean(entry.images && entry.images.length > 0)
                   const isExpanded = Boolean(expandedEntries[entry.id])
 
                   return (
-                    <article
-                      key={entry.id}
-                      className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-                    >
-                      <span className="absolute -left-[29px] top-6 h-3.5 w-3.5 rounded-full border-2 border-white bg-primary-500 shadow" />
-
-                      <div className="space-y-4 p-4 sm:p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 space-y-2">
-                            <p className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary-700">
-                              <Clock3 className="h-3.5 w-3.5" />
-                              Registro de avance
-                            </p>
-                            <h3 className="text-lg font-semibold leading-tight text-slate-900">{entry.title}</h3>
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                              <span className="inline-flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {formatDate(entry.entry_date)}
-                              </span>
-                              <span className="inline-flex items-center gap-1">
-                                <User className="h-3.5 w-3.5" />
-                                {entry.user_name || 'Usuario'}
-                              </span>
-                              {hasImages && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700">
-                                  <ImageIcon className="h-3.5 w-3.5" />
-                                  {entry.images!.length} imagen(es)
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex shrink-0 items-center gap-1">
-                            {hasImages && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleExpand(entry.id)}
-                                className="text-slate-600 hover:text-slate-900"
-                              >
-                                {isExpanded ? (
-                                  <>
-                                    <ChevronUp className="mr-1 h-4 w-4" />
-                                    Ocultar
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="mr-1 h-4 w-4" />
-                                    Ver
-                                  </>
-                                )}
-                              </Button>
-                            )}
-                            {canDelete(entry) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(entry.id)}
-                                disabled={deletingId === entry.id}
-                                className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                                title="Eliminar entrada"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {entry.description && (
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed text-slate-700">
-                            <p className="mb-1 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              <FileText className="h-3.5 w-3.5" />
-                              Detalle
-                            </p>
-                            <p className="whitespace-pre-wrap">{entry.description}</p>
-                          </div>
+                    <article key={entry.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <h4 className="line-clamp-2 text-sm font-semibold text-slate-900">{entry.title}</h4>
+                        {canDelete(entry) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(entry.id)}
+                            disabled={deletingId === entry.id}
+                            className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                            title="Eliminar entrada"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
+                      </div>
 
-                        {hasImages && isExpanded && (
-                          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Evidencia fotografica</p>
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                              {entry.images!.map((image) => (
+                      <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {formatDate(entry.entry_date)}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
+                          <User className="h-3.5 w-3.5" />
+                          {entry.user_name || 'Usuario'}
+                        </span>
+                      </div>
+
+                      {entry.description && (
+                        <p className="line-clamp-4 text-sm leading-relaxed text-slate-700">{entry.description}</p>
+                      )}
+
+                      {hasImages && (
+                        <div className="mt-3 border-t border-slate-200 pt-3">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                              <ImageIcon className="h-3.5 w-3.5" />
+                              {entry.images!.length} imagen(es)
+                            </span>
+                            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => toggleExpand(entry.id)}>
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="mr-1 h-3.5 w-3.5" />
+                                  Ocultar
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="mr-1 h-3.5 w-3.5" />
+                                  Ver
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="grid grid-cols-2 gap-2">
+                              {entry.images!.slice(0, 4).map((image) => (
                                 <button
                                   key={image.id}
                                   type="button"
-                                  className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white text-left"
+                                  className="group relative overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
                                   onClick={() => setSelectedImage(image.image_url)}
                                 >
                                   <img
                                     src={image.image_url}
                                     alt={image.caption || 'Imagen de bitacora'}
-                                    className="h-28 w-full object-cover transition-transform group-hover:scale-105"
+                                    className="h-20 w-full object-cover transition-transform group-hover:scale-105"
                                   />
-                                  <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/20" />
                                 </button>
                               ))}
                             </div>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      )}
                     </article>
                   )
                 })}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}

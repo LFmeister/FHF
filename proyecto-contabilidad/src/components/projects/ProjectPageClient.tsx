@@ -213,7 +213,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-b from-slate-100/90 via-slate-50/95 to-slate-100/70 shadow-sm">
         <div className="border-b border-slate-200 bg-gradient-to-r from-slate-900 via-primary-900 to-emerald-900 p-4 sm:p-6">
           <Button
             variant="ghost"
@@ -266,7 +266,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
           </div>
         </div>
 
-        <div className="p-3 sm:p-4">
+        <div className="border-t border-slate-200/70 bg-slate-100/70 p-3 sm:p-4">
           <nav className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
             <button onClick={() => handleTabChange('overview')} className={tabButtonClass('overview')}>
               <BarChart3 className="h-4 w-4" />
@@ -316,55 +316,55 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200/80 bg-gradient-to-b from-slate-100/85 via-slate-50 to-primary-50/40 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:p-6">
+      <section className="rounded-3xl border border-slate-200/80 bg-gradient-to-b from-slate-200/55 via-slate-100/75 to-primary-100/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] sm:p-6">
         {activeTab === 'overview' && (
           <div className="space-y-6">
-          {(userRole === 'admin' || userRole === 'owner') && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{formatAmount(totalIncome)}</div>
-                  <p className="mt-1 text-xs text-gray-500">{income.length} ingresos</p>
-                </CardContent>
-              </Card>
+            {(userRole === 'admin' || userRole === 'owner') && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{formatAmount(totalIncome)}</div>
+                    <p className="mt-1 text-xs text-gray-500">{income.length} ingresos</p>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">{formatAmount(totalExpenses)}</div>
-                  <p className="mt-1 text-xs text-gray-500">{expenses.length} gastos</p>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">{formatAmount(totalExpenses)}</div>
+                    <p className="mt-1 text-xs text-gray-500">{expenses.length} gastos</p>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatAmount(calculatedBalance)}
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">{calculatedBalance >= 0 ? 'Disponible' : 'Deficit'}</p>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatAmount(calculatedBalance)}
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">{calculatedBalance >= 0 ? 'Disponible' : 'Deficit'}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            <div className={`grid gap-4 sm:gap-6 ${userRole === 'view' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
+              <IncomeChart income={income} totalIncome={totalIncome} />
+              <ExpenseChart expenses={expenses} totalExpenses={totalExpenses} />
             </div>
-          )}
 
-          <div className={`grid gap-4 sm:gap-6 ${userRole === 'view' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
-            <IncomeChart income={income} totalIncome={totalIncome} />
-            <ExpenseChart expenses={expenses} totalExpenses={totalExpenses} />
-          </div>
-
-          {inventoryItems.length > 0 && (
-            <div className="mt-6">
-              <InventoryChart items={inventoryItems} showSummary={false} />
-            </div>
-          )}
+            {inventoryItems.length > 0 && (
+              <div className="mt-6">
+                <InventoryChart items={inventoryItems} showSummary={false} />
+              </div>
+            )}
           </div>
         )}
 

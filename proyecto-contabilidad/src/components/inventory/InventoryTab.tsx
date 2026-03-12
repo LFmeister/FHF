@@ -11,6 +11,7 @@ import { InventoryList } from './InventoryList'
 import { useToast } from '@/components/ui/Toast'
 import { InventoryChart } from '@/components/charts/InventoryChart'
 import { permissions, type UserRole } from '@/lib/permissions'
+import { PopupModal } from '@/components/ui/PopupModal'
 
 interface InventoryTabProps {
   projectId: string
@@ -116,20 +117,30 @@ export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
               </Button>
             )}
             
-            {permissions.canEdit(userRole) && (
-              <Button onClick={() => setShowAdd(!showAdd)} className="whitespace-nowrap">
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">{showAdd ? 'Cancelar' : 'Agregar Producto'}</span>
-                <span className="sm:hidden">{showAdd ? 'Cancelar' : 'Agregar'}</span>
-              </Button>
-            )}
+            <Button
+              onClick={() => setShowAdd(true)}
+              className="whitespace-nowrap"
+              disabled={!permissions.canEdit(userRole)}
+              variant={permissions.canEdit(userRole) ? 'primary' : 'outline'}
+              title={permissions.canEdit(userRole) ? 'Agregar producto' : 'No tienes permisos para agregar productos'}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span>Agregar producto</span>
+            </Button>
           </div>
         </div>
       </div>
 
-      {showAdd && (
-        <AddItemForm projectId={projectId} onSuccess={() => { setShowAdd(false); load(); showSuccess('✅ Producto agregado exitosamente') }} />
-      )}
+      <PopupModal isOpen={showAdd} onClose={() => setShowAdd(false)} maxWidth="3xl">
+        <AddItemForm
+          projectId={projectId}
+          onSuccess={() => {
+            setShowAdd(false)
+            load()
+            showSuccess('Producto agregado exitosamente')
+          }}
+        />
+      </PopupModal>
 
       {/* Gráficas de Inventario - Solo si hay datos */}
       {items.length > 0 && (

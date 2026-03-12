@@ -14,6 +14,7 @@ import { ExpenseChart } from '@/components/charts/ExpenseChart'
 import { IncomeChart } from '@/components/charts/IncomeChart'
 import { InventoryChart } from '@/components/charts/InventoryChart'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
+import { PopupModal } from '@/components/ui/PopupModal'
 import { projectsService } from '@/lib/projects'
 import { incomeService, type Income } from '@/lib/income'
 import { expensesService, type Expense } from '@/lib/expenses'
@@ -64,6 +65,24 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     setShowAddIncome(false)
     setShowAddExpense(false)
     setShowAddLogbookEntry(false)
+  }
+
+  const openIncomeModal = () => {
+    setShowAddExpense(false)
+    setShowAddLogbookEntry(false)
+    setShowAddIncome(true)
+  }
+
+  const openExpenseModal = () => {
+    setShowAddIncome(false)
+    setShowAddLogbookEntry(false)
+    setShowAddExpense(true)
+  }
+
+  const openLogbookModal = () => {
+    setShowAddIncome(false)
+    setShowAddExpense(false)
+    setShowAddLogbookEntry(true)
   }
 
   const handleDeleteProject = () => {
@@ -297,11 +316,9 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         </div>
       </section>
 
-      {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {showAddIncome && <AddIncomeForm projectId={projectId} onSuccess={handleIncomeUpdate} />}
-          {showAddExpense && <AddExpenseForm projectId={projectId} onSuccess={handleExpenseUpdate} />}
-
+      <section className="rounded-3xl border border-slate-200/80 bg-gradient-to-b from-slate-100/85 via-slate-50 to-primary-50/40 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:p-6">
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
           {(userRole === 'admin' || userRole === 'owner') && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Card>
@@ -348,161 +365,170 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               <InventoryChart items={inventoryItems} showSummary={false} />
             </div>
           )}
-        </div>
-      )}
-
-      {activeTab === 'income' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Gestion de ingresos</h2>
-            {permissions.canEdit(userRole) && (
-              <Button onClick={() => setShowAddIncome(!showAddIncome)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {showAddIncome ? 'Cancelar' : 'Agregar ingreso'}
-              </Button>
-            )}
           </div>
+        )}
 
-          {showAddIncome && <AddIncomeForm projectId={projectId} onSuccess={handleIncomeUpdate} />}
-          <IncomeList income={income} currentUserId={user?.id || ''} userRole={userRole} onUpdate={handleIncomeUpdate} />
-        </div>
-      )}
-
-      {activeTab === 'expenses' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Gestion de gastos</h2>
-            {permissions.canEdit(userRole) && (
-              <Button onClick={() => setShowAddExpense(!showAddExpense)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {showAddExpense ? 'Cancelar' : 'Agregar gasto'}
-              </Button>
-            )}
-          </div>
-
-          {showAddExpense && <AddExpenseForm projectId={projectId} onSuccess={handleExpenseUpdate} />}
-          <ExpensesList
-            expenses={expenses}
-            currentUserId={user?.id || ''}
-            userRole={userRole}
-            onUpdate={handleExpenseUpdate}
-          />
-        </div>
-      )}
-
-      {activeTab === 'inventory' && (
-        <div className="space-y-6">
-          <InventoryTab projectId={projectId} userRole={userRole} />
-        </div>
-      )}
-
-      {activeTab === 'logbook' && (
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Bitacora del proyecto</h2>
-                <p className="text-sm text-slate-600">
-                  Seguimiento visual de avances, novedades e imagenes de respaldo.
-                </p>
-              </div>
-              <Button onClick={() => setShowAddLogbookEntry(!showAddLogbookEntry)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {showAddLogbookEntry ? 'Ocultar formulario' : 'Nueva entrada'}
-              </Button>
+        {activeTab === 'income' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium">Gestion de ingresos</h2>
+              {permissions.canEdit(userRole) && (
+                <Button onClick={openIncomeModal}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar ingreso
+                </Button>
+              )}
             </div>
+
+            <IncomeList income={income} currentUserId={user?.id || ''} userRole={userRole} onUpdate={handleIncomeUpdate} />
           </div>
+        )}
 
-          {showAddLogbookEntry && <AddLogbookEntryForm projectId={projectId} onSuccess={handleLogbookUpdate} />}
+        {activeTab === 'expenses' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium">Gestion de gastos</h2>
+              {permissions.canEdit(userRole) && (
+                <Button onClick={openExpenseModal}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar gasto
+                </Button>
+              )}
+            </div>
 
-          <LogbookList
-            entries={logbookEntries}
-            currentUserId={user?.id || ''}
-            userRole={userRole}
-            onUpdate={handleLogbookUpdate}
-          />
-        </div>
-      )}
+            <ExpensesList
+              expenses={expenses}
+              currentUserId={user?.id || ''}
+              userRole={userRole}
+              onUpdate={handleExpenseUpdate}
+            />
+          </div>
+        )}
 
-      {activeTab === 'members' && (
-        <div className="space-y-6">
-          <ProjectMembers projectId={projectId} currentUserId={user?.id || ''} userRole={userRole} />
-        </div>
-      )}
+        {activeTab === 'inventory' && (
+          <div className="space-y-6">
+            <InventoryTab projectId={projectId} userRole={userRole} />
+          </div>
+        )}
 
-      {activeTab === 'settings' && (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Configuracion del proyecto
-              </CardTitle>
-              <CardDescription>Administra configuracion y acciones criticas del proyecto.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="mb-4 text-lg font-medium">Informacion general</h3>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Nombre del proyecto</label>
-                    <div className="rounded-md bg-gray-50 p-3">{project?.name}</div>
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Codigo de invitacion</label>
-                    <div className="rounded-md bg-gray-50 p-3 font-mono">{project?.invite_code}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="mb-4 text-lg font-medium">Configuracion de moneda</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Moneda actual</label>
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-md bg-primary-50 p-3 font-semibold text-primary-700">
-                        {project?.currency === 'COP' ? 'Peso Colombiano (COP)' : 'Dolar Australiano (AUD)'}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newCurrency = project?.currency === 'COP' ? 'AUD' : 'COP'
-                          alert(`Funcion pendiente: cambiar a ${newCurrency}`)
-                        }}
-                      >
-                        Cambiar a {project?.currency === 'COP' ? 'AUD' : 'COP'}
-                      </Button>
-                    </div>
-                    <p className="mt-2 text-sm text-gray-500">
-                      Este cambio impacta la forma en que se muestran montos dentro del proyecto.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="mb-4 text-lg font-medium text-red-600">Zona de peligro</h3>
-                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                  <p className="mb-4 text-sm text-red-700">
-                    Esta accion es irreversible y eliminara permanentemente los datos del proyecto.
+        {activeTab === 'logbook' && (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur-sm sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Bitacora del proyecto</h2>
+                  <p className="text-sm text-slate-600">
+                    Seguimiento visual de avances, novedades e imagenes de respaldo.
                   </p>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={handleDeleteProject}
-                    loading={deletingProject}
-                    disabled={deletingProject}
-                  >
-                    {deletingProject ? 'Eliminando...' : 'Eliminar proyecto'}
-                  </Button>
                 </div>
+                <Button onClick={openLogbookModal}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar bitacora
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+
+            <LogbookList
+              entries={logbookEntries}
+              currentUserId={user?.id || ''}
+              userRole={userRole}
+              onUpdate={handleLogbookUpdate}
+            />
+          </div>
+        )}
+
+        {activeTab === 'members' && (
+          <div className="space-y-6">
+            <ProjectMembers projectId={projectId} currentUserId={user?.id || ''} userRole={userRole} />
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Configuracion del proyecto
+                </CardTitle>
+                <CardDescription>Administra configuracion y acciones criticas del proyecto.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="mb-4 text-lg font-medium">Informacion general</h3>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">Nombre del proyecto</label>
+                      <div className="rounded-md bg-gray-50 p-3">{project?.name}</div>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">Codigo de invitacion</label>
+                      <div className="rounded-md bg-gray-50 p-3 font-mono">{project?.invite_code}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="mb-4 text-lg font-medium">Configuracion de moneda</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">Moneda actual</label>
+                      <div className="flex items-center gap-4">
+                        <div className="rounded-md bg-primary-50 p-3 font-semibold text-primary-700">
+                          {project?.currency === 'COP' ? 'Peso Colombiano (COP)' : 'Dolar Australiano (AUD)'}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newCurrency = project?.currency === 'COP' ? 'AUD' : 'COP'
+                            alert(`Funcion pendiente: cambiar a ${newCurrency}`)
+                          }}
+                        >
+                          Cambiar a {project?.currency === 'COP' ? 'AUD' : 'COP'}
+                        </Button>
+                      </div>
+                      <p className="mt-2 text-sm text-gray-500">
+                        Este cambio impacta la forma en que se muestran montos dentro del proyecto.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="mb-4 text-lg font-medium text-red-600">Zona de peligro</h3>
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <p className="mb-4 text-sm text-red-700">
+                      Esta accion es irreversible y eliminara permanentemente los datos del proyecto.
+                    </p>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={handleDeleteProject}
+                      loading={deletingProject}
+                      disabled={deletingProject}
+                    >
+                      {deletingProject ? 'Eliminando...' : 'Eliminar proyecto'}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </section>
+
+      <PopupModal isOpen={showAddIncome} onClose={() => setShowAddIncome(false)} maxWidth="3xl">
+        <AddIncomeForm projectId={projectId} onSuccess={handleIncomeUpdate} />
+      </PopupModal>
+
+      <PopupModal isOpen={showAddExpense} onClose={() => setShowAddExpense(false)} maxWidth="3xl">
+        <AddExpenseForm projectId={projectId} onSuccess={handleExpenseUpdate} />
+      </PopupModal>
+
+      <PopupModal isOpen={showAddLogbookEntry} onClose={() => setShowAddLogbookEntry(false)} maxWidth="xl">
+        <AddLogbookEntryForm projectId={projectId} onSuccess={handleLogbookUpdate} />
+      </PopupModal>
 
       <ConfirmDeleteModal
         isOpen={showDeleteModal}

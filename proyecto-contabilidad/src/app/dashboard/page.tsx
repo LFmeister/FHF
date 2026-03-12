@@ -116,9 +116,11 @@ export default function DashboardPage() {
                 </Button>
                 <Button
                   onClick={() => setShowJoinForm((prev) => !prev)}
-                  variant={showJoinForm ? 'secondary' : 'outline'}
+                  variant="ghost"
                   size="md"
-                  className="border-white/60 bg-transparent text-white hover:bg-white/10"
+                  className={`!border !border-white/55 !text-white backdrop-blur-sm ${
+                    showJoinForm ? '!bg-emerald-400/30 hover:!bg-emerald-300/35' : '!bg-white/10 hover:!bg-white/20'
+                  }`}
                 >
                   <UserPlus2 className="mr-2 h-4 w-4" />
                   {showJoinForm ? 'Cerrar formulario' : 'Unirse por codigo'}

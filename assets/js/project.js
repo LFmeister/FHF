@@ -1,4 +1,21 @@
 // Project Page JavaScript
+function toggleMobileNav(buttonEl) {
+    const nav = document.getElementById('primaryNav');
+    if (!nav) return;
+
+    const isOpen = nav.classList.toggle('nav-open');
+    if (buttonEl) {
+        buttonEl.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+}
+
+function closeMobileNav() {
+    const nav = document.getElementById('primaryNav');
+    const toggle = document.querySelector('.nav-toggle');
+    if (nav) nav.classList.remove('nav-open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize project page
     loadProjectStats();
@@ -28,6 +45,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // File upload drag and drop
     setupFileUpload();
+
+    // Close mobile nav on desktop resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 780) {
+            closeMobileNav();
+        }
+    });
+
+    const navLinks = document.querySelectorAll('#primaryNav .nav-link');
+    navLinks.forEach(function(link) {
+        link.addEventListener('click', closeMobileNav);
+    });
 });
 
 // Load project statistics

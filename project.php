@@ -62,10 +62,13 @@ $isOwner = $project['owner_id'] === $userId;
 <body>
     <!-- Navigation -->
     <nav class="navbar">
-        <div class="container">
-            <div class="d-flex justify-between align-center">
+        <div class="container nav-shell">
+            <div class="d-flex justify-between align-center nav-content">
                 <a href="dashboard.php" class="navbar-brand">ContaProyectos</a>
-                <ul class="navbar-nav">
+                <button type="button" class="nav-toggle" aria-label="Abrir menu" aria-expanded="false" onclick="toggleMobileNav(this)">
+                    Menu
+                </button>
+                <ul class="navbar-nav" id="primaryNav">
                     <li><a href="dashboard.php" class="nav-link">Dashboard</a></li>
                     <li><a href="projects.php" class="nav-link">Proyectos</a></li>
                     <li><a href="#" class="nav-link" onclick="logout()">Cerrar Sesión</a></li>

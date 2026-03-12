@@ -1,0 +1,13 @@
+1:HL["/FHF/_next/static/css/24af0acbccc59159.css","style",{"crossOrigin":""}]
+0:["aPhClOOj3vZRulf6z9wO2",[[["",{"children":["dashboard",{"children":["__PAGE__",{}]}]},"$undefined","$undefined",true],"$L2",[[["$","link","0",{"rel":"stylesheet","href":"/FHF/_next/static/css/24af0acbccc59159.css","precedence":"next","crossOrigin":""}]],"$L3"]]]]
+4:I[4018,["185","static/chunks/app/layout-9781bf8c88db471c.js"],"ToastProvider"]
+5:I[6954,[],""]
+6:I[7264,[],""]
+7:I[3619,["160","static/chunks/app/not-found-a8cb38ccfbab0aeb.js"],""]
+8:I[3214,["218","static/chunks/218-b689dadf06ceb1a3.js","396","static/chunks/396-0cf49f0f5645684a.js","663","static/chunks/app/dashboard/layout-ad6dab82cf3aa2f7.js"],""]
+a:I[8297,[],""]
+b:I[6663,["218","static/chunks/218-b689dadf06ceb1a3.js","396","static/chunks/396-0cf49f0f5645684a.js","727","static/chunks/727-5516f7314ac80afc.js","20","static/chunks/20-1adb27a92d2914be.js","702","static/chunks/app/dashboard/page-c93b2032e61cf005.js"],""]
+c:{}
+2:[null,["$","html",null,{"lang":"es","children":["$","body",null,{"children":["$","$L4",null,{"children":["$","$L5",null,{"parallelRouterKey":"children","segmentPath":["children"],"loading":"$undefined","loadingStyles":"$undefined","loadingScripts":"$undefined","hasLoading":false,"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L6",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":["$","$L7",null,{}],"notFoundStyles":[],"childProp":{"current":[null,["$","$L8",null,{"children":["$","$L5",null,{"parallelRouterKey":"children","segmentPath":["children","dashboard","children"],"loading":"$undefined","loadingStyles":"$undefined","loadingScripts":"$undefined","hasLoading":false,"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L6",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","notFoundStyles":"$undefined","childProp":{"current":["$L9",["$","$La",null,{"propsForComponent":{"params":{}},"Component":"$b","isStaticGeneration":true}],null],"segment":"__PAGE__"},"styles":null}],"params":"$c"}],null],"segment":"dashboard"},"styles":null}]}]}]}],null]
+3:[["$","meta","0",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","1",{"charSet":"utf-8"}],["$","title","2",{"children":"Meister Manager | Control de Proyectos"}],["$","meta","3",{"name":"description","content":"Plataforma de control contable y bitacora para equipos de proyecto."}],["$","link","4",{"rel":"icon","href":"/FHF/icon.svg?98a9347889ca41dc","type":"image/svg+xml","sizes":"any"}]]
+9:null

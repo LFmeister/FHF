@@ -199,6 +199,16 @@ function buildDemoDashboard(code: string, metadata: Record<string, unknown> = {}
     throw new Error(`Codigo de invernadero no reconocido. Usa ${DEMO_GREENHOUSE_CODE} para pruebas.`)
   }
 
+  const demoMetadata = {
+    ...metadata,
+    device_name: definition.deviceName,
+    location: definition.location,
+    timezone: definition.timezone,
+    status: definition.status,
+    note: definition.note,
+    pairing_type: 'demo',
+  }
+
   const telemetryHistory = TELEMETRY_VARIATIONS.map((variation) =>
     toTelemetryPoint(buildIsoMinutesAgo(variation.minutesAgo), definition.telemetryBase, variation)
   )
@@ -221,18 +231,14 @@ function buildDemoDashboard(code: string, metadata: Record<string, unknown> = {}
 
   return {
     greenhouseCode: definition.code,
-    deviceName: String(metadata.device_name || definition.deviceName),
-    location: String(metadata.location || definition.location),
-    timezone: String(metadata.timezone || definition.timezone),
-    status: String(metadata.status || definition.status),
+    deviceName: String(demoMetadata.device_name),
+    location: String(demoMetadata.location),
+    timezone: String(demoMetadata.timezone),
+    status: String(demoMetadata.status),
     lastSeenAt: buildIsoMinutesAgo(definition.lastSeenOffsetMinutes),
     connectedAt: connectedAt || new Date().toISOString(),
     isDemo: true,
-    metadata: {
-      ...metadata,
-      note: metadata.note || definition.note,
-      pairing_type: 'demo',
-    },
+    metadata: demoMetadata,
     latestTelemetry: telemetryHistory[0] || null,
     telemetryHistory,
     recentCommands,

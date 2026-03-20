@@ -83,7 +83,7 @@ const DEMO_GREENHOUSES: Record<string, DemoGreenhouseDefinition> = {
   [DEMO_GREENHOUSE_CODE]: {
     code: DEMO_GREENHOUSE_CODE,
     deviceName: 'Invernadero Inteligente Colombia',
-    location: 'Neiva, Colombia',
+    location: 'Girardota, Antioquia, Colombia',
     timezone: 'America/Bogota',
     status: 'active',
     lastSeenOffsetMinutes: 2,
@@ -404,4 +404,3 @@ export const greenhouseService = {
     if (error) throw mapSetupError(error)
   },
 }
-

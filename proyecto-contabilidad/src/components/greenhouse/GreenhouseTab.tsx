@@ -87,7 +87,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
 
     const interval = window.setInterval(() => {
       loadDashboard()
-    }, 30000)
+    }, 180000)
 
     return () => window.clearInterval(interval)
   }, [projectId])
@@ -342,7 +342,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                   <Clock3 className="h-5 w-5 text-primary-700" />
                   Lecturas recientes
                 </CardTitle>
-                <CardDescription>Actualizacion automatica cada 30 segundos mientras esta abierto el tab.</CardDescription>
+                <CardDescription>Actualizacion automatica cada 3 minutos mientras esta abierto el tab.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {dashboard.telemetryHistory.map((item, index) => (
@@ -448,4 +448,3 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
     </div>
   )
 }
-

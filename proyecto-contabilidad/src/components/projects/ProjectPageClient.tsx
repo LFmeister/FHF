@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Receipt, Settings, ArrowLeft, BarChart3, TrendingUp, Users, Boxes, BookOpen } from 'lucide-react'
+import { Plus, Receipt, Settings, ArrowLeft, BarChart3, TrendingUp, Users, Boxes, BookOpen, Leaf } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { AddIncomeForm } from '@/components/income/AddIncomeForm'
@@ -27,6 +27,7 @@ import { useToast } from '@/components/ui/Toast'
 import { AddLogbookEntryForm } from '@/components/logbook/AddLogbookEntryForm'
 import { LogbookList } from '@/components/logbook/LogbookList'
 import { logbookService, type LogbookEntry } from '@/lib/logbook'
+import { GreenhouseTab } from '@/components/greenhouse/GreenhouseTab'
 
 interface ProjectPageClientProps {
   projectId: string
@@ -294,6 +295,11 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               </button>
             )}
 
+            <button onClick={() => handleTabChange('greenhouse')} className={tabButtonClass('greenhouse')}>
+              <Leaf className="h-4 w-4" />
+              Invernadero
+            </button>
+
             <button onClick={() => handleTabChange('logbook')} className={tabButtonClass('logbook')}>
               <BookOpen className="h-4 w-4" />
               Bitacora ({logbookEntries.length})
@@ -408,6 +414,12 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         {activeTab === 'inventory' && (
           <div className="space-y-6">
             <InventoryTab projectId={projectId} userRole={userRole} />
+          </div>
+        )}
+
+        {activeTab === 'greenhouse' && (
+          <div className="space-y-6">
+            <GreenhouseTab projectId={projectId} userRole={userRole} />
           </div>
         )}
 

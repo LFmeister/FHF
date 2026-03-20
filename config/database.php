@@ -1,98 +1,121 @@
 <?php
-// Supabase configuration
+require_once __DIR__ . '/env.php';
+
+loadEnvironment(__DIR__ . '/../.env');
+
 class Database {
-    private $supabase_url;
-    private $supabase_key;
-    private $supabase_service_key;
-    
+    private string $supabaseUrl;
+    private string $supabaseAnonKey;
+    private string $supabaseServiceKey;
+
     public function __construct() {
-        // Replace with your Supabase credentials
-        // Example: $this->supabase_url = 'https://abcdefgh.supabase.co';
-        $this->supabase_url = 'https://kcmkengwgdfehsestwve.supabase.co';
-        $this->supabase_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjbWtlbmd3Z2RmZWhzZXN0d3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyMzI1NTksImV4cCI6MjA3MjgwODU1OX0.Kh6mtZHjBxA3_vI7uuci6VBhYUHbs-a4esUnxaAbXs0';
-        $this->supabase_service_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjbWtlbmd3Z2RmZWhzZXN0d3ZlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzIzMjU1OSwiZXhwIjoyMDcyODA4NTU5fQ.tMTAYar8C80d37B4zZ9t-kLipE4HvQula1RQaEZ1YPE';
+        $this->supabaseUrl = rtrim(envRequired('SUPABASE_URL'), '/');
+        $this->supabaseAnonKey = envRequired('SUPABASE_ANON_KEY');
+        $this->supabaseServiceKey = envRequired('SUPABASE_SERVICE_ROLE_KEY');
     }
-    
-    public function makeRequest($endpoint, $method = 'GET', $data = null, $useServiceKey = false) {
-        $url = $this->supabase_url . '/rest/v1/' . $endpoint;
-        
+
+    public function makeRequest(string $endpoint, string $method = 'GET', $data = null, bool $useServiceKey = false): array {
+        $url = $this->supabaseUrl . '/rest/v1/' . ltrim($endpoint, '/');
+        $apiKey = $useServiceKey ? $this->supabaseServiceKey : $this->supabaseAnonKey;
+        $authToken = $useServiceKey ? $this->supabaseServiceKey : ($_SESSION['access_token'] ?? null);
+
         $headers = [
             'Content-Type: application/json',
             'Prefer: return=representation',
-            'apikey: ' . ($useServiceKey ? $this->supabase_service_key : $this->supabase_key)
+            'apikey: ' . $apiKey,
         ];
-        
-        if (isset($_SESSION['access_token'])) {
-            $headers[] = 'Authorization: Bearer ' . $_SESSION['access_token'];
+
+        if (!empty($authToken)) {
+            $headers[] = 'Authorization: Bearer ' . $authToken;
         }
-        
+
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-        
-        if ($data && in_array($method, ['POST', 'PUT', 'PATCH'])) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 20,
+        ]);
+
+        if ($data !== null && in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
-        
+
         $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = $response === false ? curl_error($ch) : null;
         curl_close($ch);
-        
+
         return [
-            'data' => json_decode($response, true),
-            'status' => $httpCode
+            'data' => $response !== false ? json_decode($response, true) : null,
+            'status' => $httpCode,
+            'error' => $curlError,
         ];
     }
-    
-    public function auth($endpoint, $data) {
-        $url = $this->supabase_url . '/auth/v1/' . $endpoint;
-        
+
+    public function auth(string $endpoint, array $data): array {
+        $url = $this->supabaseUrl . '/auth/v1/' . ltrim($endpoint, '/');
         $headers = [
             'Content-Type: application/json',
-            'apikey: ' . $this->supabase_key
+            'apikey: ' . $this->supabaseAnonKey,
         ];
-        
+
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 20,
+        ]);
+
         $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = $response === false ? curl_error($ch) : null;
         curl_close($ch);
-        
+
         return [
-            'data' => json_decode($response, true),
-            'status' => $httpCode
+            'data' => $response !== false ? json_decode($response, true) : null,
+            'status' => $httpCode,
+            'error' => $curlError,
         ];
     }
-    
-    public function uploadFile($bucket, $path, $file) {
-        $url = $this->supabase_url . '/storage/v1/object/' . $bucket . '/' . $path;
-        
+
+    public function uploadFile(string $bucket, string $path, $file): array {
+        if (empty($_SESSION['access_token'])) {
+            throw new RuntimeException('Missing access token for storage upload.');
+        }
+
+        $url = $this->supabaseUrl . '/storage/v1/object/' . trim($bucket, '/') . '/' . ltrim($path, '/');
         $headers = [
             'Authorization: Bearer ' . $_SESSION['access_token'],
-            'apikey: ' . $this->supabase_key
+            'apikey: ' . $this->supabaseAnonKey,
         ];
-        
+
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $file);
-        
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $file,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 30,
+        ]);
+
         $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = $response === false ? curl_error($ch) : null;
         curl_close($ch);
-        
+
         return [
-            'data' => json_decode($response, true),
-            'status' => $httpCode
+            'data' => $response !== false ? json_decode($response, true) : null,
+            'status' => $httpCode,
+            'error' => $curlError,
         ];
     }
 }

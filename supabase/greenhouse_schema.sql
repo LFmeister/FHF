@@ -190,8 +190,14 @@ using (
     select 1
     from public.project_greenhouse_integrations pgi
     join public.project_members pm on pm.project_id = pgi.project_id
-    where pgi.device_id = greenhouse_telemetry.device_id
-      and pm.user_id = auth.uid()
+    where pm.user_id = auth.uid()
+      and (
+        pgi.device_id = greenhouse_telemetry.device_id
+        or (
+          pgi.metadata ? 'bridge_mac'
+          and upper(pgi.metadata->>'bridge_mac') = upper(coalesce(greenhouse_telemetry.raw_payload->'bridge'->>'mac', ''))
+        )
+      )
   )
 );
 
@@ -210,6 +216,9 @@ using (
 );
 
 -- Example device creation. Replace the plaintext token before running.
+-- Production pairing code currently used by the frontend:
+-- GH-BCFF4D5D7AE5 -> bridge MAC BC:FF:4D:5D:7A:E5
+--
 -- The demo pairing code used by the frontend is GH-COL-7429.
 -- insert into public.greenhouse_devices (name, location, timezone, api_token_hash, metadata)
 -- values (

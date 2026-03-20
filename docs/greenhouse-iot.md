@@ -104,7 +104,9 @@ The project user pastes a greenhouse code inside the project dashboard. That cod
 
 Current practical rule:
 
-- for local/demo testing use `GH-COL-7429`
+- production pairing code: `GH-BCFF4D5D7AE5`
+- that code is linked to bridge MAC `BC:FF:4D:5D:7A:E5`
+- local/demo fallback: `GH-COL-7429`
 
 The frontend uses that code to show:
 

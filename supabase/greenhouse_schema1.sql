@@ -124,8 +124,14 @@ using (
     select 1
     from public.project_greenhouse_integrations pgi
     join public.project_members pm on pm.project_id = pgi.project_id
-    where pgi.device_id = greenhouse_telemetry.device_id
-      and pm.user_id = auth.uid()
+    where pm.user_id = auth.uid()
+      and (
+        pgi.device_id = greenhouse_telemetry.device_id
+        or (
+          pgi.metadata ? 'bridge_mac'
+          and upper(pgi.metadata->>'bridge_mac') = upper(coalesce(greenhouse_telemetry.raw_payload->'bridge'->>'mac', ''))
+        )
+      )
   )
 );
 
@@ -143,6 +149,8 @@ using (
   )
 );
 
+-- Production pairing code:
+-- GH-BCFF4D5D7AE5 -> bridge MAC BC:FF:4D:5D:7A:E5
+--
 -- Optional demo reference:
--- use GH-COL-7429 as the local pairing code in the frontend
-
+-- GH-COL-7429

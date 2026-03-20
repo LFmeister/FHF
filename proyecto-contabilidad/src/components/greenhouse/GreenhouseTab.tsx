@@ -200,9 +200,9 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               Integracion por codigo
             </CardTitle>
             <CardDescription>
-              Usa un codigo de invernadero para activar el dashboard. Para pruebas puedes usar
+              Usa el codigo del invernadero productivo para activar el dashboard. El codigo configurado para este bridge es
               {' '}
-              <span className="font-mono font-semibold text-primary-800">{greenhouseService.getDemoGreenhouseCode()}</span>.
+              <span className="font-mono font-semibold text-primary-800">{greenhouseService.getProductionGreenhouseCode()}</span>.
             </CardDescription>
           </CardHeader>
 
@@ -218,7 +218,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               <Input
                 value={pairingCode}
                 onChange={(event) => setPairingCode(event.target.value.toUpperCase())}
-                placeholder="GH-COL-7429"
+                placeholder={greenhouseService.getProductionGreenhouseCode()}
                 className="font-mono uppercase tracking-[0.12em]"
                 disabled={!canManageIntegration || saving}
               />

@@ -12,7 +12,15 @@ export interface GreenhouseTelemetryPoint {
   float_raw: number | null
   float_state: string | null
   tank_low: boolean | null
+  tank_mid: boolean | null
+  tank_full: boolean | null
   tank_low_when: string | null
+  float_low_raw: number | null
+  float_mid_raw: number | null
+  float_high_raw: number | null
+  float_low_state: string | null
+  float_mid_state: string | null
+  float_high_state: string | null
   light_on: boolean | null
   pump_on: boolean | null
   pump_remaining_ms: number | null
@@ -70,6 +78,8 @@ interface DemoGreenhouseDefinition {
     float_raw: number
     float_state: string
     tank_low: boolean
+    tank_mid?: boolean
+    tank_full?: boolean
     tank_low_when: string | null
     light_on: boolean
     pump_on: boolean
@@ -117,6 +127,8 @@ const DEMO_GREENHOUSES: Record<string, DemoGreenhouseDefinition> = {
       float_raw: 518,
       float_state: 'medio',
       tank_low: false,
+      tank_mid: true,
+      tank_full: false,
       tank_low_when: null,
       light_on: true,
       pump_on: false,
@@ -206,7 +218,15 @@ function toTelemetryPoint(
     float_raw: floatRaw,
     float_state: variation.tankLow ? 'bajo' : base.float_state,
     tank_low: variation.tankLow || base.tank_low,
+    tank_mid: base.tank_mid ?? null,
+    tank_full: base.tank_full ?? null,
     tank_low_when: variation.tankLow ? recordedAt : base.tank_low_when,
+    float_low_raw: variation.tankLow ? 1 : 0,
+    float_mid_raw: base.tank_mid ? 1 : 0,
+    float_high_raw: base.tank_full ? 1 : 0,
+    float_low_state: variation.tankLow ? 'active' : 'inactive',
+    float_mid_state: base.tank_mid ? 'active' : 'inactive',
+    float_high_state: base.tank_full ? 'active' : 'inactive',
     light_on: variation.lightOn,
     pump_on: variation.pumpOn,
     pump_remaining_ms: pumpRemaining,
@@ -284,8 +304,10 @@ function buildDemoDashboard(code: string, metadata: Record<string, unknown> = {}
 
 function mapTelemetryRow(row: any): GreenhouseTelemetryPoint {
   const rawPayload = row.raw_payload || {}
-  const arduinoPayload = getNestedValue(rawPayload, ['arduino']) || rawPayload
-  const bridgeMac = getNestedValue(rawPayload, ['bridge', 'mac'])
+  const statusPayload = getNestedValue(rawPayload, ['status'])
+  const arduinoPayload = getNestedValue(rawPayload, ['arduino']) || statusPayload || rawPayload
+  const floatSwitches = getNestedValue(rawPayload, ['float_switches']) || {}
+  const bridgeMac = getNestedValue(rawPayload, ['bridge', 'mac']) || getNestedValue(rawPayload, ['esp32', 'mac'])
 
   return {
     device_id: row.device_id ?? null,
@@ -309,7 +331,15 @@ function mapTelemetryRow(row: any): GreenhouseTelemetryPoint {
     float_raw: row.float_raw ?? (arduinoPayload.float_raw ?? null),
     float_state: row.float_state ?? (arduinoPayload.float_state ?? null),
     tank_low: row.tank_low ?? (arduinoPayload.tank_low !== undefined ? Boolean(arduinoPayload.tank_low) : null),
+    tank_mid: row.tank_mid ?? (arduinoPayload.tank_mid !== undefined ? Boolean(arduinoPayload.tank_mid) : null),
+    tank_full: row.tank_full ?? (arduinoPayload.tank_full !== undefined ? Boolean(arduinoPayload.tank_full) : null),
     tank_low_when: row.tank_low_when ?? (arduinoPayload.tank_low_when ?? null),
+    float_low_raw: row.float_low_raw ?? (arduinoPayload.float_low_raw ?? getNestedValue(floatSwitches, ['low', 'raw']) ?? null),
+    float_mid_raw: row.float_mid_raw ?? (arduinoPayload.float_mid_raw ?? getNestedValue(floatSwitches, ['mid', 'raw']) ?? null),
+    float_high_raw: row.float_high_raw ?? (arduinoPayload.float_high_raw ?? getNestedValue(floatSwitches, ['high', 'raw']) ?? null),
+    float_low_state: row.float_low_state ?? (arduinoPayload.float_low_state ?? getNestedValue(floatSwitches, ['low', 'state']) ?? null),
+    float_mid_state: row.float_mid_state ?? (arduinoPayload.float_mid_state ?? getNestedValue(floatSwitches, ['mid', 'state']) ?? null),
+    float_high_state: row.float_high_state ?? (arduinoPayload.float_high_state ?? getNestedValue(floatSwitches, ['high', 'state']) ?? null),
     light_on: row.light_on ?? (arduinoPayload.light_on !== undefined ? Boolean(arduinoPayload.light_on) : null),
     pump_on: row.pump_on ?? (arduinoPayload.pump_on !== undefined ? Boolean(arduinoPayload.pump_on) : null),
     pump_remaining_ms: row.pump_remaining_ms ?? (arduinoPayload.pump_remaining_ms ?? null),
@@ -535,8 +565,22 @@ export const greenhouseService = {
     const normalizedCode = normalizeGreenhouseCode(greenhouseCode)
     const productionDefinition = PRODUCTION_GREENHOUSES[normalizedCode]
     const demoDefinition = DEMO_GREENHOUSES[normalizedCode]
+
     if (!productionDefinition && !demoDefinition) {
-      throw new Error(`Codigo no reconocido. Usa ${PRODUCTION_GREENHOUSE_CODE} para el invernadero productivo.`)
+      const { error } = await supabase.rpc('connect_project_greenhouse_by_code', {
+        target_project_id: projectId,
+        target_greenhouse_code: normalizedCode,
+      })
+
+      if (error) {
+        if (String(error.message || '').includes('connect_project_greenhouse_by_code')) {
+          throw new Error('Falta instalar la funcion para enlazar codigos dinamicos. Ejecuta supabase/connect_greenhouse_by_code.sql en Supabase.')
+        }
+
+        throw new Error(error.message || `Codigo no reconocido: ${normalizedCode}`)
+      }
+
+      return this.getProjectDashboard(projectId)
     }
 
     const {

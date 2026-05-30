@@ -57,6 +57,14 @@ function metricValue(value: number | null, suffix: string) {
   return `${value}${suffix}`
 }
 
+function tankLevelLabel(telemetry: ProjectGreenhouseDashboard['latestTelemetry']) {
+  if (!telemetry) return 'Sin dato'
+  if (telemetry.tank_low) return 'Bajo'
+  if (telemetry.tank_full) return 'Alto'
+  if (telemetry.tank_mid) return 'Medio'
+  return telemetry.float_state || 'Normal'
+}
+
 export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
   const [dashboard, setDashboard] = useState<ProjectGreenhouseDashboard | null>(null)
   const [loading, setLoading] = useState(true)
@@ -294,10 +302,14 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-slate-900">
-                  {dashboard.latestTelemetry?.tank_low ? 'Bajo' : dashboard.latestTelemetry?.float_state || 'Normal'}
+                  {tankLevelLabel(dashboard.latestTelemetry)}
                 </div>
                 <p className="mt-2 text-sm text-slate-500">
-                  Float raw: {dashboard.latestTelemetry?.float_raw ?? 'sin dato'}
+                  Bajo: {dashboard.latestTelemetry?.float_low_state ?? dashboard.latestTelemetry?.float_low_raw ?? 'sin dato'}
+                  {' · '}
+                  Medio: {dashboard.latestTelemetry?.float_mid_state ?? dashboard.latestTelemetry?.float_mid_raw ?? 'sin dato'}
+                  {' · '}
+                  Alto: {dashboard.latestTelemetry?.float_high_state ?? dashboard.latestTelemetry?.float_high_raw ?? 'sin dato'}
                 </p>
               </CardContent>
             </Card>
@@ -360,7 +372,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                           Hum {metricValue(item.hum_pct, ' %')}
                         </span>
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.tank_low ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                          Tanque {item.tank_low ? 'bajo' : item.float_state || 'normal'}
+                          Tanque {tankLevelLabel(item).toLowerCase()}
                         </span>
                       </div>
                     </div>

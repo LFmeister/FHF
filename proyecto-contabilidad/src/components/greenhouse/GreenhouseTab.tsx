@@ -190,9 +190,41 @@ function getTankFillPercent(telemetry: ProjectGreenhouseDashboard['latestTelemet
   return 0
 }
 
-function sensorStatusClass(active: boolean | null) {
-  if (active === true) return 'border-emerald-300 bg-emerald-100 text-emerald-800'
-  if (active === false) return 'border-slate-200 bg-white text-slate-600'
+function tankLevelTone(telemetry: ProjectGreenhouseDashboard['latestTelemetry'], metadata: Record<string, unknown>) {
+  if (getSwitchActive(telemetry, metadata, 'low')) {
+    return {
+      water: 'from-rose-700 via-rose-500 to-orange-200',
+      border: 'border-rose-300',
+      badge: 'bg-rose-100 text-rose-800',
+    }
+  }
+
+  if (getSwitchActive(telemetry, metadata, 'high')) {
+    return {
+      water: 'from-sky-700 via-sky-500 to-cyan-200',
+      border: 'border-sky-300',
+      badge: 'bg-sky-100 text-sky-800',
+    }
+  }
+
+  if (getSwitchActive(telemetry, metadata, 'mid')) {
+    return {
+      water: 'from-emerald-700 via-emerald-500 to-teal-200',
+      border: 'border-emerald-300',
+      badge: 'bg-emerald-100 text-emerald-800',
+    }
+  }
+
+  return {
+    water: 'from-slate-500 via-slate-400 to-slate-200',
+    border: 'border-slate-300',
+    badge: 'bg-slate-100 text-slate-700',
+  }
+}
+
+function switchMarkerClass(state: string | null) {
+  if (state?.toLowerCase() === 'closed') return 'border-emerald-300 bg-emerald-100 text-emerald-800'
+  if (state?.toLowerCase() === 'open') return 'border-amber-300 bg-amber-100 text-amber-800'
   return 'border-slate-200 bg-slate-100 text-slate-500'
 }
 
@@ -200,16 +232,17 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
   const telemetry = dashboard.latestTelemetry
   const config = getTankConfig(dashboard.metadata)
   const fillPercent = getTankFillPercent(telemetry, dashboard.metadata)
-  const sensorStates: Record<string, boolean | null> = {
-    high: getSwitchActive(telemetry, dashboard.metadata, 'high'),
-    mid: getSwitchActive(telemetry, dashboard.metadata, 'mid'),
-    low: getSwitchActive(telemetry, dashboard.metadata, 'low'),
-  }
   const sensorRaw: Record<string, string> = {
     high: floatSwitchValue(getSwitchState(telemetry, 'high'), getSwitchRaw(telemetry, 'high')),
     mid: floatSwitchValue(getSwitchState(telemetry, 'mid'), getSwitchRaw(telemetry, 'mid')),
     low: floatSwitchValue(getSwitchState(telemetry, 'low'), getSwitchRaw(telemetry, 'low')),
   }
+  const sensorState: Record<string, string | null> = {
+    high: getSwitchState(telemetry, 'high'),
+    mid: getSwitchState(telemetry, 'mid'),
+    low: getSwitchState(telemetry, 'low'),
+  }
+  const tone = tankLevelTone(telemetry, dashboard.metadata)
 
   return (
     <Card className="overflow-hidden border-sky-100 bg-white/92">
@@ -223,11 +256,11 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
           {config.capacityLiters ? ` - Capacidad ${config.capacityLiters} L` : ''}
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <div className="flex justify-center">
-          <div className="relative h-80 w-44 rounded-b-[2rem] rounded-t-xl border-2 border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 shadow-inner">
+      <CardContent className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        <div className="flex justify-center overflow-visible pl-20 pr-6">
+          <div className={`relative h-80 w-44 rounded-b-[2rem] rounded-t-xl border-2 ${tone.border} bg-gradient-to-b from-slate-50 to-slate-100 shadow-inner`}>
             <div
-              className="absolute inset-x-2 bottom-2 rounded-b-[1.55rem] rounded-t-md bg-gradient-to-t from-sky-600 via-sky-400 to-cyan-200 transition-all duration-700"
+              className={`absolute inset-x-2 bottom-2 rounded-b-[1.55rem] rounded-t-md bg-gradient-to-t ${tone.water} transition-all duration-700`}
               style={{ height: `${Math.max(fillPercent, 2)}%` }}
             >
               <div className="absolute inset-x-0 top-0 h-3 rounded-full bg-white/45" />
@@ -237,9 +270,9 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
               {Math.round(fillPercent)}%
             </div>
             {config.sensors.map((sensor) => (
-              <div key={sensor.key} className="absolute right-full mr-3 flex items-center gap-2" style={{ bottom: `${sensor.position}%` }}>
+              <div key={sensor.key} className="absolute right-full mr-4 flex min-w-16 items-center justify-end gap-2" style={{ bottom: `${sensor.position}%` }}>
                 <span className="whitespace-nowrap text-xs font-semibold text-slate-600">{sensor.label}</span>
-                <span className={`h-3 w-3 rounded-full border ${sensorStatusClass(sensorStates[sensor.key])}`} />
+                <span className={`h-3 w-3 rounded-full border ${switchMarkerClass(sensorState[sensor.key])}`} />
               </div>
             ))}
           </div>
@@ -248,10 +281,10 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             {config.sensors.map((sensor) => (
-              <div key={sensor.key} className={`rounded-xl border px-3 py-3 ${sensorStatusClass(sensorStates[sensor.key])}`}>
+              <div key={sensor.key} className={`rounded-xl border px-3 py-3 ${switchMarkerClass(sensorState[sensor.key])}`}>
                 <p className="text-xs font-semibold uppercase">{sensor.label}</p>
-                <p className="mt-1 text-lg font-bold">{sensorStates[sensor.key] ? 'Activo' : 'Inactivo'}</p>
-                <p className="mt-1 text-xs">Lectura: {sensorRaw[sensor.key]}</p>
+                <p className="mt-1 text-lg font-bold">{sensorState[sensor.key] || 'Sin dato'}</p>
+                <p className="mt-1 text-xs">Raw: {sensorRaw[sensor.key]}</p>
               </div>
             ))}
           </div>

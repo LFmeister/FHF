@@ -84,26 +84,26 @@ begin
   );
 
   new.float_low_raw := coalesce(
-    new.float_low_raw,
+    public.greenhouse_jsonb_to_smallint(switches->'low'->'raw'),
     public.greenhouse_jsonb_to_smallint(status->'float_low_raw'),
-    public.greenhouse_jsonb_to_smallint(switches->'low'->'raw')
+    new.float_low_raw
   );
 
   new.float_mid_raw := coalesce(
-    new.float_mid_raw,
+    public.greenhouse_jsonb_to_smallint(switches->'mid'->'raw'),
     public.greenhouse_jsonb_to_smallint(status->'float_mid_raw'),
-    public.greenhouse_jsonb_to_smallint(switches->'mid'->'raw')
+    new.float_mid_raw
   );
 
   new.float_high_raw := coalesce(
-    new.float_high_raw,
+    public.greenhouse_jsonb_to_smallint(switches->'high'->'raw'),
     public.greenhouse_jsonb_to_smallint(status->'float_high_raw'),
-    public.greenhouse_jsonb_to_smallint(switches->'high'->'raw')
+    new.float_high_raw
   );
 
-  new.float_low_state := coalesce(new.float_low_state, status->>'float_low_state', switches->'low'->>'state');
-  new.float_mid_state := coalesce(new.float_mid_state, status->>'float_mid_state', switches->'mid'->>'state');
-  new.float_high_state := coalesce(new.float_high_state, status->>'float_high_state', switches->'high'->>'state');
+  new.float_low_state := coalesce(switches->'low'->>'state', status->>'float_low_state', new.float_low_state);
+  new.float_mid_state := coalesce(switches->'mid'->>'state', status->>'float_mid_state', new.float_mid_state);
+  new.float_high_state := coalesce(switches->'high'->>'state', status->>'float_high_state', new.float_high_state);
   new.float_mid_active_when := coalesce(new.float_mid_active_when, status->>'float_mid_active_when');
   new.float_high_active_when := coalesce(new.float_high_active_when, status->>'float_high_active_when');
   new.dht_fresh := coalesce(new.dht_fresh, public.greenhouse_jsonb_to_bool(status->'dht_fresh'));

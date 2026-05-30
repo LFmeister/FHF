@@ -389,7 +389,7 @@ function sensorIsConnected(sensor: { kind: string; metrics: ProjectGreenhouseDas
 
     const raw = sensorMetricNumber(sensor, ['raw'])
     const moisture = sensorMetricNumber(sensor, ['moisture_pct'])
-    if (raw === 0 || raw === 4095 || moisture === null) return false
+    if (raw === null || moisture === null || moisture === 100) return false
 
     return true
   }

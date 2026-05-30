@@ -2,7 +2,7 @@
   "esp32": {
     "mac": "00:70:07:7C:86:80",
     "wifi_ip": "10.195.170.249",
-    "wifi_rssi": -48,
+    "wifi_rssi": -47,
     "wifi_ssid": "Jifo"
   },
   "source": "esp32-gateway",
@@ -11,7 +11,7 @@
     "stream": 1,
     "pump_on": 0,
     "light_on": 0,
-    "uptime_ms": 2206878,
+    "uptime_ms": 2631585,
     "pump_remaining_ms": 0
   },
   "dht_sensors": [
@@ -21,7 +21,7 @@
       "pin": 4,
       "kind": "environment",
       "label": "DHT11 ambiente 1",
-      "temp_c": 25.6,
+      "temp_c": 25.8,
       "hum_pct": 64
     },
     {
@@ -30,8 +30,8 @@
       "pin": 14,
       "kind": "environment",
       "label": "DHT11 ambiente 2",
-      "temp_c": 26.4,
-      "hum_pct": 65
+      "temp_c": 26.6,
+      "hum_pct": 66
     },
     {
       "id": "dht_3",
@@ -47,7 +47,7 @@
     {
       "id": "soil_1",
       "pin": 32,
-      "raw": 834,
+      "raw": 769,
       "kind": "soil_moisture",
       "label": "Suelo 1",
       "moisture_pct": 100
@@ -55,7 +55,7 @@
     {
       "id": "soil_2",
       "pin": 33,
-      "raw": 320,
+      "raw": 238,
       "kind": "soil_moisture",
       "label": "Suelo 2",
       "moisture_pct": 100
@@ -94,9 +94,9 @@
     },
     "mid": {
       "pin": 18,
-      "raw": 1,
-      "state": "open",
-      "active": false
+      "raw": 0,
+      "state": "closed",
+      "active": true
     },
     "high": {
       "pin": 19,

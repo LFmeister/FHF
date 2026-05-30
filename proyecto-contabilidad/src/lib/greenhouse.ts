@@ -40,6 +40,22 @@ export interface GreenhouseCommandItem {
   result_payload: Record<string, unknown>
 }
 
+export interface GreenhouseSensorReading {
+  id: number | string
+  telemetry_id: number | string | null
+  device_id: string
+  recorded_at: string
+  sensor_key: string
+  sensor_label: string | null
+  sensor_kind: string
+  metric: string
+  unit: string | null
+  value_number: number | null
+  value_boolean: boolean | null
+  value_text: string | null
+  metadata: Record<string, unknown>
+}
+
 export interface ProjectGreenhouseDashboard {
   greenhouseCode: string
   deviceName: string
@@ -53,6 +69,7 @@ export interface ProjectGreenhouseDashboard {
   latestTelemetry: GreenhouseTelemetryPoint | null
   telemetryHistory: GreenhouseTelemetryPoint[]
   recentCommands: GreenhouseCommandItem[]
+  sensorReadings: GreenhouseSensorReading[]
 }
 
 interface ProjectGreenhouseIntegrationRow {
@@ -323,6 +340,7 @@ function buildDemoDashboard(code: string, metadata: Record<string, unknown> = {}
     latestTelemetry: telemetryHistory[0] || null,
     telemetryHistory,
     recentCommands,
+    sensorReadings: [],
   }
 }
 
@@ -372,6 +390,24 @@ function mapTelemetryRow(row: any): GreenhouseTelemetryPoint {
   }
 }
 
+function mapSensorReadingRow(row: any): GreenhouseSensorReading {
+  return {
+    id: row.id,
+    telemetry_id: row.telemetry_id ?? null,
+    device_id: row.device_id,
+    recorded_at: row.recorded_at,
+    sensor_key: row.sensor_key,
+    sensor_label: row.sensor_label ?? null,
+    sensor_kind: row.sensor_kind,
+    metric: row.metric,
+    unit: row.unit ?? null,
+    value_number: row.value_number === null || row.value_number === undefined ? null : Number(row.value_number),
+    value_boolean: toNullableBool(row.value_boolean),
+    value_text: row.value_text ?? null,
+    metadata: row.metadata || {},
+  }
+}
+
 function mapSetupError(error: any) {
   const message = String(error?.message || '')
   if (message.includes('project_greenhouse_integrations')) {
@@ -416,6 +452,25 @@ async function updateIntegrationDevice(projectId: string, deviceId: string, meta
     .eq('project_id', projectId)
 
   if (error) throw mapSetupError(error)
+}
+
+async function getSensorReadings(deviceId: string, limit = 100): Promise<GreenhouseSensorReading[]> {
+  const { data, error } = await supabase
+    .from('greenhouse_sensor_readings')
+    .select('id, telemetry_id, device_id, recorded_at, sensor_key, sensor_label, sensor_kind, metric, unit, value_number, value_boolean, value_text, metadata')
+    .eq('device_id', deviceId)
+    .order('recorded_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    const message = String(error.message || '')
+    if (message.includes('greenhouse_sensor_readings') || message.includes('schema cache')) {
+      return []
+    }
+    throw error
+  }
+
+  return (data || []).map(mapSensorReadingRow)
 }
 
 export const greenhouseService = {
@@ -466,6 +521,7 @@ export const greenhouseService = {
       let status = String(integration.metadata?.status || 'active')
       let lastSeenAt = latestTelemetry?.recorded_at || null
       let recentCommands: GreenhouseCommandItem[] = []
+      let sensorReadings: GreenhouseSensorReading[] = []
 
       if (resolvedDeviceId) {
         const [deviceResponse, commandsResponse] = await Promise.all([
@@ -502,6 +558,7 @@ export const greenhouseService = {
           completed_at: command.completed_at,
           result_payload: command.result_payload || {},
         }))
+        sensorReadings = await getSensorReadings(resolvedDeviceId)
       }
 
       return {
@@ -517,6 +574,7 @@ export const greenhouseService = {
         latestTelemetry,
         telemetryHistory,
         recentCommands,
+        sensorReadings,
       }
     }
 
@@ -551,6 +609,7 @@ export const greenhouseService = {
 
       const telemetryHistory = (telemetryResponse.data || []).map(mapTelemetryRow)
       const device = deviceResponse.data
+      const sensorReadings = await getSensorReadings(integration.device_id)
 
       return {
         greenhouseCode: integration.greenhouse_code,
@@ -575,6 +634,7 @@ export const greenhouseService = {
           completed_at: command.completed_at,
           result_payload: command.result_payload || {},
         })),
+        sensorReadings,
       }
     } catch (error) {
       if (DEMO_GREENHOUSES[integration.greenhouse_code]) {

@@ -82,6 +82,183 @@ function floatSwitchValue(state: string | null | undefined, raw: number | null |
   return 'sin dato'
 }
 
+function getNestedRecord(value: Record<string, unknown>, key: string) {
+  const nested = value[key]
+  return nested && typeof nested === 'object' && !Array.isArray(nested) ? (nested as Record<string, unknown>) : {}
+}
+
+function getTankConfig(metadata: Record<string, unknown>) {
+  const tank = getNestedRecord(metadata, 'tank_config')
+  const sensors = getNestedRecord(tank, 'sensors')
+
+  const readNumber = (value: unknown, fallback: number) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+
+  const sensorConfig = (key: string, fallbackLabel: string, fallbackPosition: number) => {
+    const config = getNestedRecord(sensors, key)
+    return {
+      key,
+      label: String(config.label || fallbackLabel),
+      position: Math.max(0, Math.min(100, readNumber(config.position_percent, fallbackPosition))),
+    }
+  }
+
+  return {
+    label: String(tank.label || 'Tanque principal'),
+    capacityLiters: tank.capacity_liters === undefined || tank.capacity_liters === null ? null : readNumber(tank.capacity_liters, 0),
+    shape: String(tank.shape || 'vertical'),
+    sensors: [
+      sensorConfig('high', 'Alto', 90),
+      sensorConfig('mid', 'Medio', 55),
+      sensorConfig('low', 'Bajo', 20),
+    ],
+  }
+}
+
+function getTankFillPercent(telemetry: ProjectGreenhouseDashboard['latestTelemetry'], metadata: Record<string, unknown>) {
+  if (!telemetry) return 0
+  const config = getTankConfig(metadata)
+  const high = config.sensors.find((sensor) => sensor.key === 'high')?.position ?? 90
+  const mid = config.sensors.find((sensor) => sensor.key === 'mid')?.position ?? 55
+  const low = config.sensors.find((sensor) => sensor.key === 'low')?.position ?? 20
+
+  if (telemetry.tank_full) return Math.min(100, high + 5)
+  if (telemetry.tank_mid) return mid
+  if (telemetry.tank_low) return Math.max(8, low - 8)
+  if (
+    telemetry.float_low_raw !== null ||
+    telemetry.float_mid_raw !== null ||
+    telemetry.float_high_raw !== null ||
+    telemetry.float_low_state ||
+    telemetry.float_mid_state ||
+    telemetry.float_high_state
+  ) {
+    return Math.max(0, low - 14)
+  }
+
+  return 0
+}
+
+function sensorStatusClass(active: boolean | null) {
+  if (active === true) return 'border-emerald-300 bg-emerald-100 text-emerald-800'
+  if (active === false) return 'border-slate-200 bg-white text-slate-600'
+  return 'border-slate-200 bg-slate-100 text-slate-500'
+}
+
+function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
+  const telemetry = dashboard.latestTelemetry
+  const config = getTankConfig(dashboard.metadata)
+  const fillPercent = getTankFillPercent(telemetry, dashboard.metadata)
+  const sensorStates: Record<string, boolean | null> = {
+    high: telemetry?.tank_full ?? null,
+    mid: telemetry?.tank_mid ?? null,
+    low: telemetry?.tank_low ?? null,
+  }
+  const sensorRaw: Record<string, string> = {
+    high: floatSwitchValue(telemetry?.float_high_state, telemetry?.float_high_raw),
+    mid: floatSwitchValue(telemetry?.float_mid_state, telemetry?.float_mid_raw),
+    low: floatSwitchValue(telemetry?.float_low_state, telemetry?.float_low_raw),
+  }
+
+  return (
+    <Card className="overflow-hidden border-sky-100 bg-white/92">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-slate-900">
+          <Waves className="h-5 w-5 text-sky-600" />
+          {config.label}
+        </CardTitle>
+        <CardDescription>
+          Nivel estimado por flotadores: {tankLevelLabel(telemetry)}
+          {config.capacityLiters ? ` - Capacidad ${config.capacityLiters} L` : ''}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-6 lg:grid-cols-[240px_1fr]">
+        <div className="flex justify-center">
+          <div className="relative h-80 w-44 rounded-b-[2rem] rounded-t-xl border-2 border-slate-300 bg-gradient-to-b from-slate-50 to-slate-100 shadow-inner">
+            <div
+              className="absolute inset-x-2 bottom-2 rounded-b-[1.55rem] rounded-t-md bg-gradient-to-t from-sky-600 via-sky-400 to-cyan-200 transition-all duration-700"
+              style={{ height: `${Math.max(fillPercent, 2)}%` }}
+            >
+              <div className="absolute inset-x-0 top-0 h-3 rounded-full bg-white/45" />
+            </div>
+            <div className="absolute inset-0 rounded-b-[2rem] rounded-t-xl bg-[linear-gradient(90deg,rgba(255,255,255,0.55),transparent_28%,transparent_72%,rgba(15,23,42,0.08))]" />
+            <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-white/85 px-3 py-1 text-sm font-bold text-slate-900 shadow-sm">
+              {Math.round(fillPercent)}%
+            </div>
+            {config.sensors.map((sensor) => (
+              <div key={sensor.key} className="absolute left-full ml-3 flex items-center gap-2" style={{ bottom: `${sensor.position}%` }}>
+                <span className={`h-3 w-3 rounded-full border ${sensorStatusClass(sensorStates[sensor.key])}`} />
+                <span className="whitespace-nowrap text-xs font-semibold text-slate-600">{sensor.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {config.sensors.map((sensor) => (
+              <div key={sensor.key} className={`rounded-xl border px-3 py-3 ${sensorStatusClass(sensorStates[sensor.key])}`}>
+                <p className="text-xs font-semibold uppercase">{sensor.label}</p>
+                <p className="mt-1 text-lg font-bold">{sensorStates[sensor.key] ? 'Activo' : 'Inactivo'}</p>
+                <p className="mt-1 text-xs">Lectura: {sensorRaw[sensor.key]}</p>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <p className="font-semibold text-slate-900">Configuracion del tanque</p>
+            <p className="mt-1">
+              Sensores ubicados a {config.sensors.map((sensor) => `${sensor.label} ${sensor.position}%`).join(', ')}.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function sensorReadingValue(reading: ProjectGreenhouseDashboard['sensorReadings'][number]) {
+  if (reading.value_number !== null) {
+    return `${reading.value_number}${reading.unit ? ` ${reading.unit}` : ''}`
+  }
+  if (reading.value_boolean !== null) return reading.value_boolean ? 'Si' : 'No'
+  return reading.value_text || 'Sin dato'
+}
+
+function latestSensorGroups(readings: ProjectGreenhouseDashboard['sensorReadings']) {
+  const groups = new Map<
+    string,
+    {
+      key: string
+      label: string
+      kind: string
+      recordedAt: string
+      metrics: ProjectGreenhouseDashboard['sensorReadings']
+    }
+  >()
+
+  readings.forEach((reading) => {
+    const existing = groups.get(reading.sensor_key)
+    if (!existing) {
+      groups.set(reading.sensor_key, {
+        key: reading.sensor_key,
+        label: reading.sensor_label || reading.sensor_key,
+        kind: reading.sensor_kind,
+        recordedAt: reading.recorded_at,
+        metrics: [reading],
+      })
+      return
+    }
+
+    if (!existing.metrics.some((metric) => metric.metric === reading.metric)) {
+      existing.metrics.push(reading)
+    }
+  })
+
+  return Array.from(groups.values())
+}
+
 export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
   const [dashboard, setDashboard] = useState<ProjectGreenhouseDashboard | null>(null)
   const [loading, setLoading] = useState(true)
@@ -323,9 +500,9 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                 </div>
                 <p className="mt-2 text-sm text-slate-500">
                   Bajo: {floatSwitchValue(dashboard.latestTelemetry?.float_low_state, dashboard.latestTelemetry?.float_low_raw)}
-                  {' · '}
+                  {' - '}
                   Medio: {floatSwitchValue(dashboard.latestTelemetry?.float_mid_state, dashboard.latestTelemetry?.float_mid_raw)}
-                  {' · '}
+                  {' - '}
                   Alto: {floatSwitchValue(dashboard.latestTelemetry?.float_high_state, dashboard.latestTelemetry?.float_high_raw)}
                 </p>
               </CardContent>
@@ -363,6 +540,40 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               </CardContent>
             </Card>
           </div>
+
+          <TankVisual dashboard={dashboard} />
+
+          {dashboard.sensorReadings.length > 0 && (
+            <Card className="bg-white/88">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-slate-900">
+                  <Activity className="h-5 w-5 text-primary-700" />
+                  Sensores conectados
+                </CardTitle>
+                <CardDescription>Lecturas dinamicas reportadas por el dispositivo.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {latestSensorGroups(dashboard.sensorReadings).map((sensor) => (
+                  <div key={sensor.key} className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-900">{sensor.label}</p>
+                        <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">{sensor.kind}</p>
+                      </div>
+                      <span className="text-xs text-slate-500">{formatDateTime(sensor.recordedAt)}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {sensor.metrics.slice(0, 8).map((reading) => (
+                        <span key={`${sensor.key}-${reading.metric}`} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                          {reading.metric}: {sensorReadingValue(reading)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
             <Card className="bg-white/88">
@@ -477,3 +688,4 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
     </div>
   )
 }
+

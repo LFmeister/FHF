@@ -547,6 +547,7 @@ export const greenhouseService = {
         timezone = device?.timezone || timezone
         status = device?.status || status
         lastSeenAt = device?.last_seen_at || lastSeenAt
+        Object.assign(mergedMetadata, device?.metadata || {})
         recentCommands = (commandsResponse.data || []).map((command) => ({
           id: command.id,
           command_text: command.command_text,
@@ -620,7 +621,10 @@ export const greenhouseService = {
         lastSeenAt: device?.last_seen_at || null,
         connectedAt: integration.connected_at,
         isDemo: false,
-        metadata: integration.metadata || {},
+        metadata: {
+          ...(integration.metadata || {}),
+          ...(device?.metadata || {}),
+        },
         latestTelemetry: telemetryHistory[0] || null,
         telemetryHistory,
         recentCommands: (commandsResponse.data || []).map((command) => ({

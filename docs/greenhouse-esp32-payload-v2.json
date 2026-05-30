@@ -1,0 +1,108 @@
+{
+  "source": "esp32-gateway",
+  "esp32": {
+    "mac": "00:70:07:7C:86:80",
+    "wifi_ip": "10.195.170.249",
+    "wifi_rssi": -41,
+    "wifi_ssid": "Jifo"
+  },
+  "status": {
+    "type": "status",
+    "stream": 1,
+    "pump_on": 0,
+    "light_on": 0,
+    "uptime_ms": 806046,
+    "pump_remaining_ms": 0
+  },
+  "dht_sensors": [
+    {
+      "id": "dht_1",
+      "label": "DHT11 ambiente 1",
+      "kind": "environment",
+      "pin": 4,
+      "temp_c": 24.8,
+      "hum_pct": 72.1,
+      "ok": true
+    },
+    {
+      "id": "dht_2",
+      "label": "DHT11 ambiente 2",
+      "kind": "environment",
+      "pin": 14,
+      "temp_c": 25.2,
+      "hum_pct": 70.4,
+      "ok": true
+    },
+    {
+      "id": "dht_3",
+      "label": "DHT11 ambiente 3",
+      "kind": "environment",
+      "pin": 16,
+      "temp_c": 24.5,
+      "hum_pct": 73.0,
+      "ok": true
+    }
+  ],
+  "soil_sensors": [
+    {
+      "id": "soil_1",
+      "label": "Suelo 1",
+      "kind": "soil_moisture",
+      "pin": 32,
+      "raw": 2190,
+      "moisture_pct": 58.2
+    },
+    {
+      "id": "soil_2",
+      "label": "Suelo 2",
+      "kind": "soil_moisture",
+      "pin": 33,
+      "raw": 2320,
+      "moisture_pct": 54.7
+    },
+    {
+      "id": "soil_3",
+      "label": "Suelo 3",
+      "kind": "soil_moisture",
+      "pin": 34,
+      "raw": 2480,
+      "moisture_pct": 49.8
+    },
+    {
+      "id": "soil_4",
+      "label": "Suelo 4",
+      "kind": "soil_moisture",
+      "pin": 35,
+      "raw": 2275,
+      "moisture_pct": 56.0
+    },
+    {
+      "id": "soil_5",
+      "label": "Suelo 5",
+      "kind": "soil_moisture",
+      "pin": "SVN",
+      "raw": 2405,
+      "moisture_pct": 52.1
+    }
+  ],
+  "float_switches": {
+    "low": {
+      "pin": 27,
+      "raw": 1,
+      "state": "open",
+      "tank_low": true
+    },
+    "mid": {
+      "pin": 18,
+      "raw": 1,
+      "state": "open",
+      "active": false
+    },
+    "high": {
+      "pin": 19,
+      "raw": 0,
+      "state": "closed",
+      "active": true
+    }
+  }
+}

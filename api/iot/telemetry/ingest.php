@@ -104,6 +104,10 @@ function buildGreenhouseSensorReadings(array $input, array $status, string $devi
     addGreenhouseSensorCollection($readings, $deviceId, $telemetryId, $recordedAt, $input['sensors'] ?? null, 'sensor');
     addGreenhouseSensorCollection($readings, $deviceId, $telemetryId, $recordedAt, $input['environment_sensors'] ?? null, 'environment');
     addGreenhouseSensorCollection($readings, $deviceId, $telemetryId, $recordedAt, $input['dht_sensors'] ?? null, 'environment');
+    addGreenhouseSensorCollection($readings, $deviceId, $telemetryId, $recordedAt, $input['temperature_sensors'] ?? null, 'environment');
+    addGreenhouseSensorCollection($readings, $deviceId, $telemetryId, $recordedAt, $input['humidity_sensors'] ?? null, 'environment');
+    addGreenhouseSensorCollection($readings, $deviceId, $telemetryId, $recordedAt, $input['soil_sensors'] ?? null, 'soil_moisture');
+    addGreenhouseSensorCollection($readings, $deviceId, $telemetryId, $recordedAt, $input['soil_moisture_sensors'] ?? null, 'soil_moisture');
 
     if (isset($input['float_switches']) && is_array($input['float_switches'])) {
         foreach ($input['float_switches'] as $key => $floatSwitch) {
@@ -123,30 +127,8 @@ $deviceId = $device['id'];
 $telemetryData = [
     'device_id' => $deviceId,
     'recorded_at' => $recordedAt,
-    'source' => 'arduino-gateway',
+    'source' => $input['source'] ?? 'esp32-gateway',
     'device_uptime_ms' => $status['uptime_ms'] ?? null,
-    'dht_ok' => isset($status['dht_ok']) ? (bool) $status['dht_ok'] : null,
-    'temp_c' => $status['temp_c'] ?? null,
-    'hum_pct' => $status['hum_pct'] ?? null,
-    'float_raw' => $status['float_raw'] ?? null,
-    'float_state' => $status['float_state'] ?? null,
-    'tank_low' => isset($status['tank_low']) ? (bool) $status['tank_low'] : null,
-    'tank_mid' => isset($status['tank_mid']) ? (bool) $status['tank_mid'] : null,
-    'tank_full' => isset($status['tank_full']) ? (bool) $status['tank_full'] : null,
-    'tank_low_when' => $status['tank_low_when'] ?? null,
-    'float_low_raw' => $input['float_switches']['low']['raw'] ?? ($status['float_low_raw'] ?? null),
-    'float_mid_raw' => $input['float_switches']['mid']['raw'] ?? ($status['float_mid_raw'] ?? null),
-    'float_high_raw' => $input['float_switches']['high']['raw'] ?? ($status['float_high_raw'] ?? null),
-    'float_low_state' => $input['float_switches']['low']['state'] ?? ($status['float_low_state'] ?? null),
-    'float_mid_state' => $input['float_switches']['mid']['state'] ?? ($status['float_mid_state'] ?? null),
-    'float_high_state' => $input['float_switches']['high']['state'] ?? ($status['float_high_state'] ?? null),
-    'float_mid_active_when' => $status['float_mid_active_when'] ?? null,
-    'float_high_active_when' => $status['float_high_active_when'] ?? null,
-    'dht_fresh' => isset($status['dht_fresh']) ? (bool) $status['dht_fresh'] : null,
-    'dht_age_ms' => $status['dht_age_ms'] ?? null,
-    'light_on' => isset($status['light_on']) ? (bool) $status['light_on'] : null,
-    'pump_on' => isset($status['pump_on']) ? (bool) $status['pump_on'] : null,
-    'pump_remaining_ms' => $status['pump_remaining_ms'] ?? null,
     'stream' => isset($status['stream']) ? (bool) $status['stream'] : null,
     'raw_payload' => $input,
 ];
@@ -162,6 +144,9 @@ if ($telemetryId > 0) {
     $sensorReadings = buildGreenhouseSensorReadings($input, $status, $deviceId, $telemetryId, $recordedAt);
     if (!empty($sensorReadings)) {
         $sensorReadingsResponse = $db->makeRequest('greenhouse_sensor_readings', 'POST', $sensorReadings, true);
+        if (!in_array($sensorReadingsResponse['status'], [200, 201], true)) {
+            sendJsonResponse(false, 'La telemetria se guardo, pero no se pudieron guardar las lecturas de sensores. Ejecuta supabase/reset_greenhouse_telemetry_v2.sql o supabase/greenhouse_flexible_sensor_readings.sql.', $sensorReadingsResponse, 502);
+        }
     }
 }
 

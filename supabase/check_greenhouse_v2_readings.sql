@@ -31,6 +31,17 @@ from public.greenhouse_sensor_readings
 where device_id = '6f272f36-131f-4c87-b9f7-3bb0a83d4c71'
 order by sensor_key, metric, recorded_at desc;
 
+-- Quick counts by sensor kind. If this returns 0 rows, the backend is not
+-- inserting into greenhouse_sensor_readings and the app will use raw_payload fallback.
+select
+  sensor_kind,
+  count(*) as readings,
+  max(recorded_at) as latest_recorded_at
+from public.greenhouse_sensor_readings
+where device_id = '6f272f36-131f-4c87-b9f7-3bb0a83d4c71'
+group by sensor_kind
+order by sensor_kind;
+
 -- Tank sensor comparison from normalized readings.
 select
   sensor_key,

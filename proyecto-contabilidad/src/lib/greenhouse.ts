@@ -408,6 +408,107 @@ function mapSensorReadingRow(row: any): GreenhouseSensorReading {
   }
 }
 
+function buildSyntheticSensorReading(
+  telemetry: GreenhouseTelemetryPoint,
+  sensorKey: string,
+  sensorLabel: string,
+  sensorKind: string,
+  metric: string,
+  value: unknown,
+  rawPayload: Record<string, unknown>
+): GreenhouseSensorReading | null {
+  if (value === null || value === undefined || value === '') return null
+
+  const unit = metric.includes('temp') ? 'C' : metric.includes('hum') || metric.includes('moisture') ? '%' : metric.includes('rssi') ? 'dBm' : null
+  const reading: GreenhouseSensorReading = {
+    id: `raw-${telemetry.recorded_at}-${sensorKey}-${metric}`,
+    telemetry_id: null,
+    device_id: telemetry.device_id || '',
+    recorded_at: telemetry.recorded_at,
+    sensor_key: sensorKey,
+    sensor_label: sensorLabel,
+    sensor_kind: sensorKind,
+    metric,
+    unit,
+    value_number: null,
+    value_boolean: null,
+    value_text: null,
+    metadata: {},
+  }
+
+  if (typeof value === 'boolean') {
+    reading.value_boolean = value
+  } else if (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)))) {
+    reading.value_number = Number(value)
+  } else {
+    reading.value_text = String(value)
+  }
+
+  return reading
+}
+
+function buildSyntheticSensorReadingsFromTelemetry(telemetry: GreenhouseTelemetryPoint | null): GreenhouseSensorReading[] {
+  if (!telemetry) return []
+
+  const rawPayload = telemetry.raw_payload || {}
+  const readings: GreenhouseSensorReading[] = []
+
+  const addMetricSet = (
+    sensorKey: string,
+    sensorLabel: string,
+    sensorKind: string,
+    payload: Record<string, unknown>,
+    skip = new Set(['id', 'key', 'name', 'label', 'type', 'kind', 'unit', 'units', 'metadata'])
+  ) => {
+    Object.entries(payload).forEach(([metric, value]) => {
+      if (skip.has(metric) || typeof value === 'object') return
+      const reading = buildSyntheticSensorReading(telemetry, sensorKey, sensorLabel, sensorKind, metric, value, payload)
+      if (reading) readings.push(reading)
+    })
+  }
+
+  const addSensorCollection = (collection: unknown, defaultKind: string) => {
+    if (!Array.isArray(collection)) return
+
+    collection.forEach((sensor, index) => {
+      if (!sensor || typeof sensor !== 'object' || Array.isArray(sensor)) return
+      const payload = sensor as Record<string, unknown>
+      const sensorKey = String(payload.id || payload.key || `${defaultKind}_${index + 1}`)
+      const sensorLabel = String(payload.label || payload.name || sensorKey)
+      const sensorKind = String(payload.kind || payload.type || defaultKind)
+      addMetricSet(sensorKey, sensorLabel, sensorKind, payload)
+    })
+  }
+
+  addSensorCollection(rawPayload.dht_sensors, 'environment')
+  addSensorCollection(rawPayload.environment_sensors, 'environment')
+  addSensorCollection(rawPayload.temperature_sensors, 'environment')
+  addSensorCollection(rawPayload.humidity_sensors, 'environment')
+  addSensorCollection(rawPayload.soil_sensors, 'soil_moisture')
+  addSensorCollection(rawPayload.soil_moisture_sensors, 'soil_moisture')
+
+  const floatSwitches = rawPayload.float_switches
+  if (floatSwitches && typeof floatSwitches === 'object' && !Array.isArray(floatSwitches)) {
+    Object.entries(floatSwitches as Record<string, unknown>).forEach(([key, value]) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return
+      addMetricSet(`float_${key}`, `Flotador ${key}`, 'float_switch', value as Record<string, unknown>)
+    })
+  }
+
+  return readings
+}
+
+function mergeSensorReadings(
+  persisted: GreenhouseSensorReading[],
+  fallback: GreenhouseSensorReading[]
+): GreenhouseSensorReading[] {
+  const seen = new Set(persisted.map((reading) => `${reading.sensor_key}:${reading.metric}`))
+  return [
+    ...persisted,
+    ...fallback.filter((reading) => !seen.has(`${reading.sensor_key}:${reading.metric}`)),
+  ]
+}
+
 function mapSetupError(error: any) {
   const message = String(error?.message || '')
   if (message.includes('project_greenhouse_integrations')) {
@@ -559,7 +660,7 @@ export const greenhouseService = {
           completed_at: command.completed_at,
           result_payload: command.result_payload || {},
         }))
-        sensorReadings = await getSensorReadings(resolvedDeviceId)
+        sensorReadings = mergeSensorReadings(await getSensorReadings(resolvedDeviceId), buildSyntheticSensorReadingsFromTelemetry(latestTelemetry))
       }
 
       return {
@@ -610,7 +711,11 @@ export const greenhouseService = {
 
       const telemetryHistory = (telemetryResponse.data || []).map(mapTelemetryRow)
       const device = deviceResponse.data
-      const sensorReadings = await getSensorReadings(integration.device_id)
+      const latestTelemetry = telemetryHistory[0] || null
+      const sensorReadings = mergeSensorReadings(
+        await getSensorReadings(integration.device_id),
+        buildSyntheticSensorReadingsFromTelemetry(latestTelemetry)
+      )
 
       return {
         greenhouseCode: integration.greenhouse_code,
@@ -625,7 +730,7 @@ export const greenhouseService = {
           ...(integration.metadata || {}),
           ...(device?.metadata || {}),
         },
-        latestTelemetry: telemetryHistory[0] || null,
+        latestTelemetry,
         telemetryHistory,
         recentCommands: (commandsResponse.data || []).map((command) => ({
           id: command.id,

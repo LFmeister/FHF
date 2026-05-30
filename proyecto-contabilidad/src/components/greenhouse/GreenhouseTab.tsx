@@ -344,9 +344,24 @@ function sensorMetricNumber(
   return reading?.value_number ?? null
 }
 
+function sensorHasPin(sensor: { metrics: ProjectGreenhouseDashboard['sensorReadings'] }) {
+  return sensor.metrics.some((reading) => {
+    if (!['pin', 'data_pin', 'analog_pin'].includes(reading.metric)) return false
+    return reading.value_number !== null || Boolean(reading.value_text)
+  })
+}
+
+function sensorHasRaw(sensor: { metrics: ProjectGreenhouseDashboard['sensorReadings'] }) {
+  return sensor.metrics.some((reading) => reading.metric === 'raw' && reading.value_number !== null)
+}
+
 function hasDisplayValue(reading: ProjectGreenhouseDashboard['sensorReadings'][number]) {
   if (['pin', 'data_pin', 'analog_pin'].includes(reading.metric)) return false
   return reading.value_number !== null || reading.value_boolean !== null || Boolean(reading.value_text)
+}
+
+function sensorHasAnyMetric(sensor: { metrics: ProjectGreenhouseDashboard['sensorReadings'] }, metricNames: string[]) {
+  return sensor.metrics.some((reading) => metricNames.includes(reading.metric) && hasDisplayValue(reading))
 }
 
 function sensorIsConnected(sensor: { kind: string; metrics: ProjectGreenhouseDashboard['sensorReadings'] }) {
@@ -354,18 +369,33 @@ function sensorIsConnected(sensor: { kind: string; metrics: ProjectGreenhouseDas
   const connected = sensorMetricBool(sensor, ['connected'])
   if (connected === false) return false
 
-  const active = sensorMetricBool(sensor, ['active'])
-  if (active === false) return false
-
   const ok = sensorMetricBool(sensor, ['ok', 'dht_ok'])
-  if ((kind.includes('environment') || kind.includes('dht') || kind.includes('soil')) && ok === false) {
-    return false
+  if (kind.includes('controller')) {
+    return sensor.metrics.some(hasDisplayValue)
   }
 
-  if (kind.includes('soil') && connected === null && active === null && ok === null) {
+  if (kind.includes('float')) {
+    return sensorHasAnyMetric(sensor, ['state', 'raw', 'tank_low', 'active'])
+  }
+
+  if (kind.includes('environment') || kind.includes('dht')) {
+    if (ok === false) return false
+    return sensorHasPin(sensor) && sensorHasAnyMetric(sensor, ['temp_c', 'temperature_c', 'temperature', 'hum_pct', 'humidity_pct', 'humidity'])
+  }
+
+  if (kind.includes('soil')) {
+    if (ok === false) return false
+    if (!sensorHasPin(sensor) || !sensorHasRaw(sensor)) return false
+
     const raw = sensorMetricNumber(sensor, ['raw'])
     const moisture = sensorMetricNumber(sensor, ['moisture_pct'])
     if (raw === 0 || raw === 4095 || moisture === null) return false
+
+    return true
+  }
+
+  if (!sensorHasPin(sensor)) {
+    return false
   }
 
   return sensor.metrics.some(hasDisplayValue)

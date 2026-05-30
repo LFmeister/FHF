@@ -59,9 +59,9 @@ function metricValue(value: number | null, suffix: string) {
 
 function tankLevelLabel(telemetry: ProjectGreenhouseDashboard['latestTelemetry'], metadata: Record<string, unknown> = {}) {
   if (!telemetry) return 'Sin dato'
-  if (getSwitchActive(telemetry, metadata, 'high')) return 'Alto'
-  if (getSwitchActive(telemetry, metadata, 'mid')) return 'Medio'
-  if (getSwitchActive(telemetry, metadata, 'low')) return 'Bajo'
+  if (getSwitchClosed(telemetry, 'high')) return 'Alto'
+  if (getSwitchClosed(telemetry, 'mid')) return 'Medio'
+  if (getSwitchClosed(telemetry, 'low')) return 'Bajo'
   if (telemetry.float_state) return telemetry.float_state
   if (
     telemetry.float_low_raw !== null ||
@@ -77,9 +77,16 @@ function tankLevelLabel(telemetry: ProjectGreenhouseDashboard['latestTelemetry']
 }
 
 function floatSwitchValue(state: string | null | undefined, raw: number | null | undefined) {
-  if (state) return state
+  if (state) return translateSwitchState(state)
   if (raw !== null && raw !== undefined) return String(raw)
   return 'sin dato'
+}
+
+function translateSwitchState(state: string | null | undefined) {
+  const normalized = state?.toLowerCase()
+  if (normalized === 'open') return 'abierto'
+  if (normalized === 'closed') return 'cerrado'
+  return state || 'sin dato'
 }
 
 function getNestedRecord(value: Record<string, unknown>, key: string) {
@@ -134,6 +141,10 @@ function getSwitchState(telemetry: ProjectGreenhouseDashboard['latestTelemetry']
   return telemetry?.float_low_state ?? null
 }
 
+function getSwitchClosed(telemetry: ProjectGreenhouseDashboard['latestTelemetry'], key: string) {
+  return getSwitchState(telemetry, key)?.toLowerCase() === 'closed'
+}
+
 function getSwitchRaw(telemetry: ProjectGreenhouseDashboard['latestTelemetry'], key: string) {
   const payloadSwitch = getPayloadSwitch(telemetry, key)
   const rawFromPayload = payloadSwitch.raw
@@ -173,13 +184,10 @@ function getTankFillPercent(telemetry: ProjectGreenhouseDashboard['latestTelemet
   const high = config.sensors.find((sensor) => sensor.key === 'high')?.position ?? 90
   const mid = config.sensors.find((sensor) => sensor.key === 'mid')?.position ?? 55
   const low = config.sensors.find((sensor) => sensor.key === 'low')?.position ?? 20
-  const highActive = getSwitchActive(telemetry, metadata, 'high')
-  const midActive = getSwitchActive(telemetry, metadata, 'mid')
-  const lowActive = getSwitchActive(telemetry, metadata, 'low')
 
-  if (highActive) return Math.min(100, high + 5)
-  if (midActive) return mid
-  if (lowActive) return Math.max(8, low - 8)
+  if (getSwitchClosed(telemetry, 'high')) return Math.min(100, high + 5)
+  if (getSwitchClosed(telemetry, 'mid')) return mid
+  if (getSwitchClosed(telemetry, 'low')) return Math.max(18, low)
   if (
     telemetry.float_low_raw !== null ||
     telemetry.float_mid_raw !== null ||
@@ -195,7 +203,7 @@ function getTankFillPercent(telemetry: ProjectGreenhouseDashboard['latestTelemet
 }
 
 function tankLevelTone(telemetry: ProjectGreenhouseDashboard['latestTelemetry'], metadata: Record<string, unknown>) {
-  if (getSwitchActive(telemetry, metadata, 'low')) {
+  if (getSwitchClosed(telemetry, 'low') && !getSwitchClosed(telemetry, 'mid') && !getSwitchClosed(telemetry, 'high')) {
     return {
       water: 'from-rose-700 via-rose-500 to-orange-200',
       border: 'border-rose-300',
@@ -203,7 +211,7 @@ function tankLevelTone(telemetry: ProjectGreenhouseDashboard['latestTelemetry'],
     }
   }
 
-  if (getSwitchActive(telemetry, metadata, 'high')) {
+  if (getSwitchClosed(telemetry, 'high')) {
     return {
       water: 'from-sky-700 via-sky-500 to-cyan-200',
       border: 'border-sky-300',
@@ -211,7 +219,7 @@ function tankLevelTone(telemetry: ProjectGreenhouseDashboard['latestTelemetry'],
     }
   }
 
-  if (getSwitchActive(telemetry, metadata, 'mid')) {
+  if (getSwitchClosed(telemetry, 'mid')) {
     return {
       water: 'from-emerald-700 via-emerald-500 to-teal-200',
       border: 'border-emerald-300',
@@ -226,10 +234,17 @@ function tankLevelTone(telemetry: ProjectGreenhouseDashboard['latestTelemetry'],
   }
 }
 
-function switchMarkerClass(state: string | null) {
-  if (state?.toLowerCase() === 'closed') return 'border-emerald-300 bg-emerald-100 text-emerald-800'
-  if (state?.toLowerCase() === 'open') return 'border-amber-300 bg-amber-100 text-amber-800'
-  return 'border-slate-200 bg-slate-100 text-slate-500'
+function tankSwitchStateClass(key: string, telemetry: ProjectGreenhouseDashboard['latestTelemetry']) {
+  const state = getSwitchState(telemetry, key)?.toLowerCase()
+  if (!state) return 'border-slate-200 bg-slate-100 text-slate-500'
+  if (state === 'open') return 'border-amber-300 bg-amber-100 text-amber-800'
+
+  if (key === 'low' && !getSwitchClosed(telemetry, 'mid') && !getSwitchClosed(telemetry, 'high')) {
+    return 'border-rose-300 bg-rose-100 text-rose-800'
+  }
+
+  if (key === 'high') return 'border-sky-300 bg-sky-100 text-sky-800'
+  return 'border-emerald-300 bg-emerald-100 text-emerald-800'
 }
 
 function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
@@ -277,7 +292,7 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
             {visibleTankSensors.map((sensor) => (
               <div key={sensor.key} className="absolute right-full mr-4 flex min-w-16 items-center justify-end gap-2" style={{ bottom: `${sensor.position}%` }}>
                 <span className="whitespace-nowrap text-xs font-semibold text-slate-600">{sensor.label}</span>
-                <span className={`h-3 w-3 rounded-full border ${switchMarkerClass(sensorState[sensor.key])}`} />
+                <span className={`h-3 w-3 rounded-full border ${tankSwitchStateClass(sensor.key, telemetry)}`} />
               </div>
             ))}
           </div>
@@ -286,10 +301,10 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             {visibleTankSensors.map((sensor) => (
-              <div key={sensor.key} className={`rounded-xl border px-3 py-3 ${switchMarkerClass(sensorState[sensor.key])}`}>
+              <div key={sensor.key} className={`rounded-xl border px-3 py-3 ${tankSwitchStateClass(sensor.key, telemetry)}`}>
                 <p className="text-xs font-semibold uppercase">{sensor.label}</p>
-                <p className="mt-1 text-lg font-bold">{sensorState[sensor.key] || 'Sin dato'}</p>
-                <p className="mt-1 text-xs">Raw: {sensorRaw[sensor.key]}</p>
+                <p className="mt-1 text-lg font-bold">{translateSwitchState(sensorState[sensor.key])}</p>
+                <p className="mt-1 text-xs">Lectura: {sensorRaw[sensor.key]}</p>
               </div>
             ))}
           </div>
@@ -321,18 +336,36 @@ function sensorMetricBool(
   return reading?.value_boolean ?? null
 }
 
+function sensorMetricNumber(
+  sensor: { metrics: ProjectGreenhouseDashboard['sensorReadings'] },
+  metricNames: string[]
+) {
+  const reading = sensor.metrics.find((metric) => metricNames.includes(metric.metric))
+  return reading?.value_number ?? null
+}
+
 function hasDisplayValue(reading: ProjectGreenhouseDashboard['sensorReadings'][number]) {
   if (['pin', 'data_pin', 'analog_pin'].includes(reading.metric)) return false
   return reading.value_number !== null || reading.value_boolean !== null || Boolean(reading.value_text)
 }
 
 function sensorIsConnected(sensor: { kind: string; metrics: ProjectGreenhouseDashboard['sensorReadings'] }) {
+  const kind = sensor.kind.toLowerCase()
   const connected = sensorMetricBool(sensor, ['connected'])
   if (connected === false) return false
 
+  const active = sensorMetricBool(sensor, ['active'])
+  if (active === false) return false
+
   const ok = sensorMetricBool(sensor, ['ok', 'dht_ok'])
-  if ((sensor.kind.toLowerCase().includes('environment') || sensor.kind.toLowerCase().includes('dht')) && ok === false) {
+  if ((kind.includes('environment') || kind.includes('dht') || kind.includes('soil')) && ok === false) {
     return false
+  }
+
+  if (kind.includes('soil') && connected === null && active === null && ok === null) {
+    const raw = sensorMetricNumber(sensor, ['raw'])
+    const moisture = sensorMetricNumber(sensor, ['moisture_pct'])
+    if (raw === 0 || raw === 4095 || moisture === null) return false
   }
 
   return sensor.metrics.some(hasDisplayValue)

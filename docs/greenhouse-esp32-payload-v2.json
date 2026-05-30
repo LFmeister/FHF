@@ -49,6 +49,7 @@
       "label": "Suelo 1",
       "kind": "soil_moisture",
       "pin": 32,
+      "connected": true,
       "raw": 2190,
       "moisture_pct": 58.2
     },
@@ -57,6 +58,7 @@
       "label": "Suelo 2",
       "kind": "soil_moisture",
       "pin": 33,
+      "connected": true,
       "raw": 2320,
       "moisture_pct": 54.7
     },
@@ -65,6 +67,7 @@
       "label": "Suelo 3",
       "kind": "soil_moisture",
       "pin": 34,
+      "connected": true,
       "raw": 2480,
       "moisture_pct": 49.8
     },
@@ -73,6 +76,7 @@
       "label": "Suelo 4",
       "kind": "soil_moisture",
       "pin": 35,
+      "connected": true,
       "raw": 2275,
       "moisture_pct": 56.0
     },
@@ -81,6 +85,7 @@
       "label": "Suelo 5",
       "kind": "soil_moisture",
       "pin": "SVN",
+      "connected": true,
       "raw": 2405,
       "moisture_pct": 52.1
     }

@@ -250,6 +250,30 @@ function getNestedValue(payload: Record<string, any>, path: string[]) {
   return current
 }
 
+function toNullableBool(value: unknown): boolean | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value !== 0
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (['1', 'true', 't', 'yes', 'y', 'on'].includes(normalized)) return true
+    if (['0', 'false', 'f', 'no', 'n', 'off'].includes(normalized)) return false
+  }
+  return null
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+function toNullableString(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+  const text = String(value)
+  return text === '' ? null : text
+}
+
 function buildDemoDashboard(code: string, metadata: Record<string, unknown> = {}, connectedAt?: string): ProjectGreenhouseDashboard {
   const definition = DEMO_GREENHOUSES[code]
   if (!definition) {
@@ -315,7 +339,7 @@ function mapTelemetryRow(row: any): GreenhouseTelemetryPoint {
     recorded_at: row.recorded_at,
     source: row.source,
     device_uptime_ms: row.device_uptime_ms ?? null,
-    dht_ok: row.dht_ok ?? (arduinoPayload.dht_ok !== undefined ? Boolean(arduinoPayload.dht_ok) : null),
+    dht_ok: toNullableBool(row.dht_ok) ?? toNullableBool(arduinoPayload.dht_ok),
     temp_c:
       row.temp_c === null || row.temp_c === undefined
         ? arduinoPayload.temp_c === undefined
@@ -328,22 +352,22 @@ function mapTelemetryRow(row: any): GreenhouseTelemetryPoint {
           ? null
           : Number(arduinoPayload.hum_pct)
         : Number(row.hum_pct),
-    float_raw: row.float_raw ?? (arduinoPayload.float_raw ?? null),
-    float_state: row.float_state ?? (arduinoPayload.float_state ?? null),
-    tank_low: row.tank_low ?? (arduinoPayload.tank_low !== undefined ? Boolean(arduinoPayload.tank_low) : null),
-    tank_mid: row.tank_mid ?? (arduinoPayload.tank_mid !== undefined ? Boolean(arduinoPayload.tank_mid) : null),
-    tank_full: row.tank_full ?? (arduinoPayload.tank_full !== undefined ? Boolean(arduinoPayload.tank_full) : null),
-    tank_low_when: row.tank_low_when ?? (arduinoPayload.tank_low_when ?? null),
-    float_low_raw: row.float_low_raw ?? (arduinoPayload.float_low_raw ?? getNestedValue(floatSwitches, ['low', 'raw']) ?? null),
-    float_mid_raw: row.float_mid_raw ?? (arduinoPayload.float_mid_raw ?? getNestedValue(floatSwitches, ['mid', 'raw']) ?? null),
-    float_high_raw: row.float_high_raw ?? (arduinoPayload.float_high_raw ?? getNestedValue(floatSwitches, ['high', 'raw']) ?? null),
-    float_low_state: row.float_low_state ?? (arduinoPayload.float_low_state ?? getNestedValue(floatSwitches, ['low', 'state']) ?? null),
-    float_mid_state: row.float_mid_state ?? (arduinoPayload.float_mid_state ?? getNestedValue(floatSwitches, ['mid', 'state']) ?? null),
-    float_high_state: row.float_high_state ?? (arduinoPayload.float_high_state ?? getNestedValue(floatSwitches, ['high', 'state']) ?? null),
-    light_on: row.light_on ?? (arduinoPayload.light_on !== undefined ? Boolean(arduinoPayload.light_on) : null),
-    pump_on: row.pump_on ?? (arduinoPayload.pump_on !== undefined ? Boolean(arduinoPayload.pump_on) : null),
-    pump_remaining_ms: row.pump_remaining_ms ?? (arduinoPayload.pump_remaining_ms ?? null),
-    stream: row.stream ?? (arduinoPayload.stream !== undefined ? Boolean(arduinoPayload.stream) : null),
+    float_raw: toNullableNumber(row.float_raw) ?? toNullableNumber(arduinoPayload.float_raw),
+    float_state: toNullableString(row.float_state) ?? toNullableString(arduinoPayload.float_state),
+    tank_low: toNullableBool(row.tank_low) ?? toNullableBool(arduinoPayload.tank_low) ?? toNullableBool(getNestedValue(floatSwitches, ['low', 'tank_low'])),
+    tank_mid: toNullableBool(row.tank_mid) ?? toNullableBool(arduinoPayload.tank_mid) ?? toNullableBool(getNestedValue(floatSwitches, ['mid', 'active'])),
+    tank_full: toNullableBool(row.tank_full) ?? toNullableBool(arduinoPayload.tank_full) ?? toNullableBool(getNestedValue(floatSwitches, ['high', 'active'])),
+    tank_low_when: toNullableString(row.tank_low_when) ?? toNullableString(arduinoPayload.tank_low_when),
+    float_low_raw: toNullableNumber(row.float_low_raw) ?? toNullableNumber(arduinoPayload.float_low_raw) ?? toNullableNumber(getNestedValue(floatSwitches, ['low', 'raw'])),
+    float_mid_raw: toNullableNumber(row.float_mid_raw) ?? toNullableNumber(arduinoPayload.float_mid_raw) ?? toNullableNumber(getNestedValue(floatSwitches, ['mid', 'raw'])),
+    float_high_raw: toNullableNumber(row.float_high_raw) ?? toNullableNumber(arduinoPayload.float_high_raw) ?? toNullableNumber(getNestedValue(floatSwitches, ['high', 'raw'])),
+    float_low_state: toNullableString(row.float_low_state) ?? toNullableString(arduinoPayload.float_low_state) ?? toNullableString(getNestedValue(floatSwitches, ['low', 'state'])),
+    float_mid_state: toNullableString(row.float_mid_state) ?? toNullableString(arduinoPayload.float_mid_state) ?? toNullableString(getNestedValue(floatSwitches, ['mid', 'state'])),
+    float_high_state: toNullableString(row.float_high_state) ?? toNullableString(arduinoPayload.float_high_state) ?? toNullableString(getNestedValue(floatSwitches, ['high', 'state'])),
+    light_on: toNullableBool(row.light_on) ?? toNullableBool(arduinoPayload.light_on),
+    pump_on: toNullableBool(row.pump_on) ?? toNullableBool(arduinoPayload.pump_on),
+    pump_remaining_ms: toNullableNumber(row.pump_remaining_ms) ?? toNullableNumber(arduinoPayload.pump_remaining_ms),
+    stream: toNullableBool(row.stream) ?? toNullableBool(arduinoPayload.stream),
     raw_payload: rawPayload,
   }
 }

@@ -4,14 +4,16 @@
 -- It lets the frontend connect dynamic codes such as GH-0070077C8680 without
 -- exposing unlinked devices through broad RLS select policies.
 
+drop function if exists public.connect_project_greenhouse_by_code(uuid, text);
+
 create or replace function public.connect_project_greenhouse_by_code(
   target_project_id uuid,
   target_greenhouse_code text
 )
 returns table (
-  project_id uuid,
-  device_id uuid,
-  greenhouse_code text
+  linked_project_id uuid,
+  linked_device_id uuid,
+  linked_greenhouse_code text
 )
 language plpgsql
 security definer
@@ -73,7 +75,7 @@ begin
     )),
     now()
   )
-  on conflict (project_id)
+  on conflict on constraint project_greenhouse_integrations_pkey
   do update set
     device_id = excluded.device_id,
     greenhouse_code = excluded.greenhouse_code,
@@ -83,9 +85,9 @@ begin
 
   return query
   select
-    target_project_id,
-    matched_device.id,
-    normalized_code;
+    target_project_id as linked_project_id,
+    matched_device.id as linked_device_id,
+    normalized_code as linked_greenhouse_code;
 end;
 $$;
 

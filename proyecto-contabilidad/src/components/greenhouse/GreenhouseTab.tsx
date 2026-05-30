@@ -62,7 +62,24 @@ function tankLevelLabel(telemetry: ProjectGreenhouseDashboard['latestTelemetry']
   if (telemetry.tank_low) return 'Bajo'
   if (telemetry.tank_full) return 'Alto'
   if (telemetry.tank_mid) return 'Medio'
-  return telemetry.float_state || 'Normal'
+  if (telemetry.float_state) return telemetry.float_state
+  if (
+    telemetry.float_low_raw !== null ||
+    telemetry.float_mid_raw !== null ||
+    telemetry.float_high_raw !== null ||
+    telemetry.float_low_state ||
+    telemetry.float_mid_state ||
+    telemetry.float_high_state
+  ) {
+    return 'Sin nivel activo'
+  }
+  return 'Sin dato'
+}
+
+function floatSwitchValue(state: string | null | undefined, raw: number | null | undefined) {
+  if (state) return state
+  if (raw !== null && raw !== undefined) return String(raw)
+  return 'sin dato'
 }
 
 export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
@@ -305,11 +322,11 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                   {tankLevelLabel(dashboard.latestTelemetry)}
                 </div>
                 <p className="mt-2 text-sm text-slate-500">
-                  Bajo: {dashboard.latestTelemetry?.float_low_state ?? dashboard.latestTelemetry?.float_low_raw ?? 'sin dato'}
+                  Bajo: {floatSwitchValue(dashboard.latestTelemetry?.float_low_state, dashboard.latestTelemetry?.float_low_raw)}
                   {' · '}
-                  Medio: {dashboard.latestTelemetry?.float_mid_state ?? dashboard.latestTelemetry?.float_mid_raw ?? 'sin dato'}
+                  Medio: {floatSwitchValue(dashboard.latestTelemetry?.float_mid_state, dashboard.latestTelemetry?.float_mid_raw)}
                   {' · '}
-                  Alto: {dashboard.latestTelemetry?.float_high_state ?? dashboard.latestTelemetry?.float_high_raw ?? 'sin dato'}
+                  Alto: {floatSwitchValue(dashboard.latestTelemetry?.float_high_state, dashboard.latestTelemetry?.float_high_raw)}
                 </p>
               </CardContent>
             </Card>

@@ -205,25 +205,31 @@ function getTankFillPercent(telemetry: ProjectGreenhouseDashboard['latestTelemet
 function tankLevelTone(telemetry: ProjectGreenhouseDashboard['latestTelemetry'], metadata: Record<string, unknown>) {
   if (getSwitchClosed(telemetry, 'low') && !getSwitchClosed(telemetry, 'mid') && !getSwitchClosed(telemetry, 'high')) {
     return {
-      water: 'from-rose-700 via-rose-500 to-orange-200',
+      water: 'from-rose-600 via-orange-400 to-amber-200',
       border: 'border-rose-300',
       badge: 'bg-rose-100 text-rose-800',
+      text: 'text-rose-700',
+      rail: 'bg-rose-500',
     }
   }
 
   if (getSwitchClosed(telemetry, 'high')) {
     return {
-      water: 'from-sky-700 via-sky-500 to-cyan-200',
+      water: 'from-cyan-500 via-sky-400 to-blue-300',
       border: 'border-sky-300',
       badge: 'bg-sky-100 text-sky-800',
+      text: 'text-sky-700',
+      rail: 'bg-sky-500',
     }
   }
 
   if (getSwitchClosed(telemetry, 'mid')) {
     return {
-      water: 'from-emerald-700 via-emerald-500 to-teal-200',
+      water: 'from-emerald-500 via-teal-400 to-cyan-300',
       border: 'border-emerald-300',
       badge: 'bg-emerald-100 text-emerald-800',
+      text: 'text-emerald-700',
+      rail: 'bg-emerald-500',
     }
   }
 
@@ -231,6 +237,8 @@ function tankLevelTone(telemetry: ProjectGreenhouseDashboard['latestTelemetry'],
     water: 'from-slate-500 via-slate-400 to-slate-200',
     border: 'border-slate-300',
     badge: 'bg-slate-100 text-slate-700',
+    text: 'text-slate-700',
+    rail: 'bg-slate-400',
   }
 }
 
@@ -262,53 +270,122 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
     mid: getSwitchState(telemetry, 'mid'),
     low: getSwitchState(telemetry, 'low'),
   }
+  const sensorActive: Record<string, boolean | null> = {
+    high: getSwitchActive(telemetry, dashboard.metadata, 'high'),
+    mid: getSwitchActive(telemetry, dashboard.metadata, 'mid'),
+    low: getSwitchActive(telemetry, dashboard.metadata, 'low'),
+  }
   const tone = tankLevelTone(telemetry, dashboard.metadata)
+  const levelLabel = tankLevelLabel(telemetry, dashboard.metadata)
 
   return (
-    <Card className="overflow-hidden border-sky-100 bg-white/92">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-slate-900">
-          <Waves className="h-5 w-5 text-sky-600" />
-          {config.label}
-        </CardTitle>
-        <CardDescription>
-          Nivel estimado por flotadores: {tankLevelLabel(telemetry, dashboard.metadata)}
-          {config.capacityLiters ? ` - Capacidad ${config.capacityLiters} L` : ''}
-        </CardDescription>
+    <Card className="overflow-hidden border-slate-200 bg-white/92">
+      <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-cyan-50/70">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-slate-900">
+              <Waves className="h-5 w-5 text-sky-600" />
+              {config.label}
+            </CardTitle>
+            <CardDescription>
+              Lectura visual por flotadores
+              {config.capacityLiters ? ` - Capacidad ${config.capacityLiters} L` : ''}
+            </CardDescription>
+          </div>
+          <div className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-sm font-bold ${tone.badge}`}>
+            {levelLabel} - {Math.round(fillPercent)}%
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="flex justify-center overflow-visible pl-20 pr-6">
-          <div className={`relative h-80 w-44 rounded-b-[2rem] rounded-t-xl border-2 ${tone.border} bg-gradient-to-b from-slate-50 to-slate-100 shadow-inner`}>
-            <div
-              className={`absolute inset-x-2 bottom-2 rounded-b-[1.55rem] rounded-t-md bg-gradient-to-t ${tone.water} transition-all duration-700`}
-              style={{ height: `${Math.max(fillPercent, 2)}%` }}
-            >
-              <div className="absolute inset-x-0 top-0 h-3 rounded-full bg-white/45" />
+      <CardContent className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
+        <div className="space-y-4">
+          <div className="relative min-h-[300px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 p-5 shadow-inner">
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(14,165,233,0.12),transparent_38%),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:100%_100%,28px_28px,28px_28px]" />
+            <div className="relative flex h-full min-h-[260px] items-center gap-4">
+              <div className="flex h-64 w-10 flex-col justify-between text-right text-[11px] font-semibold text-slate-400">
+                <span>100%</span>
+                <span>75%</span>
+                <span>50%</span>
+                <span>25%</span>
+                <span>0%</span>
+              </div>
+
+              <div className={`relative h-64 flex-1 rounded-[1.75rem] border-2 ${tone.border} bg-slate-900/80 shadow-2xl`}>
+                <div className="absolute inset-y-4 left-5 w-px bg-white/10" />
+                <div className="absolute inset-y-4 right-5 w-px bg-white/10" />
+                {[25, 50, 75].map((mark) => (
+                  <div key={mark} className="absolute inset-x-5 border-t border-dashed border-white/10" style={{ bottom: `${mark}%` }} />
+                ))}
+                <div
+                  className={`absolute inset-x-4 bottom-4 rounded-b-[1.35rem] rounded-t-lg bg-gradient-to-t ${tone.water} shadow-[0_0_32px_rgba(56,189,248,0.25)] transition-all duration-700`}
+                  style={{ height: `calc((100% - 2rem) * ${Math.max(fillPercent, 2) / 100})` }}
+                >
+                  <div className="absolute inset-x-0 top-0 h-4 rounded-full bg-white/45" />
+                  <div className="absolute inset-x-6 top-2 h-px bg-white/55" />
+                </div>
+                <div className="absolute inset-0 rounded-[1.6rem] bg-[linear-gradient(90deg,rgba(255,255,255,0.26),transparent_18%,transparent_76%,rgba(15,23,42,0.38))]" />
+                <div className="absolute left-5 top-5 rounded-xl border border-white/10 bg-white/90 px-3 py-2 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase text-slate-500">Nivel</p>
+                  <p className={`text-2xl font-extrabold ${tone.text}`}>{Math.round(fillPercent)}%</p>
+                </div>
+                {visibleTankSensors.map((sensor) => (
+                  <div key={sensor.key} className="absolute right-5 flex items-center gap-2" style={{ bottom: `calc(${sensor.position}% - 0.375rem)` }}>
+                    <span className="hidden rounded bg-slate-950/70 px-2 py-1 text-[11px] font-semibold text-white sm:inline">
+                      {sensor.label}
+                    </span>
+                    <span className={`h-3 w-3 rounded-full border-2 shadow ${tankSwitchStateClass(sensor.key, telemetry)}`} />
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="absolute inset-0 rounded-b-[2rem] rounded-t-xl bg-[linear-gradient(90deg,rgba(255,255,255,0.55),transparent_28%,transparent_72%,rgba(15,23,42,0.08))]" />
-            <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-white/85 px-3 py-1 text-sm font-bold text-slate-900 shadow-sm">
-              {Math.round(fillPercent)}%
-            </div>
-            {visibleTankSensors.map((sensor) => (
-              <div key={sensor.key} className="absolute right-full mr-4 flex min-w-16 items-center justify-end gap-2" style={{ bottom: `${sensor.position}%` }}>
-                <span className="whitespace-nowrap text-xs font-semibold text-slate-600">{sensor.label}</span>
-                <span className={`h-3 w-3 rounded-full border ${tankSwitchStateClass(sensor.key, telemetry)}`} />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {config.sensors.map((sensor) => (
+              <div key={sensor.key} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase text-slate-600">{sensor.label}</span>
+                  <span className={`h-2.5 w-2.5 rounded-full ${sensorActive[sensor.key] ? tone.rail : 'bg-slate-300'}`} />
+                </div>
+                <div className="h-1.5 rounded-full bg-slate-200">
+                  <div
+                    className={`h-1.5 rounded-full ${sensorActive[sensor.key] ? tone.rail : 'bg-slate-300'}`}
+                    style={{ width: `${sensor.position}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-[11px] font-medium text-slate-500">{sensor.position}%</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase text-slate-500">Estado estimado</p>
+            <p className={`mt-2 text-3xl font-extrabold ${tone.text}`}>{levelLabel}</p>
+            <p className="mt-2 text-sm text-slate-600">
+              El nivel se calcula con los flotadores activos y sus posiciones configuradas.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
             {visibleTankSensors.map((sensor) => (
-              <div key={sensor.key} className={`rounded-xl border px-3 py-3 ${tankSwitchStateClass(sensor.key, telemetry)}`}>
-                <p className="text-xs font-semibold uppercase">{sensor.label}</p>
-                <p className="mt-1 text-lg font-bold">{translateSwitchState(sensorState[sensor.key])}</p>
-                <p className="mt-1 text-xs">Lectura: {sensorRaw[sensor.key]}</p>
+              <div key={sensor.key} className={`rounded-2xl border px-4 py-3 ${tankSwitchStateClass(sensor.key, telemetry)}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase">{sensor.label}</p>
+                    <p className="mt-1 text-lg font-bold">{translateSwitchState(sensorState[sensor.key])}</p>
+                  </div>
+                  <span className="rounded-full bg-white/70 px-2.5 py-1 text-xs font-bold">
+                    {sensor.position}%
+                  </span>
+                </div>
+                <p className="mt-2 text-xs">Lectura: {sensorRaw[sensor.key]}</p>
               </div>
             ))}
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
             <p className="font-semibold text-slate-900">Configuracion del tanque</p>
             <p className="mt-1">
               Sensores reportados: {visibleTankSensors.length > 0 ? visibleTankSensors.map((sensor) => `${sensor.label} ${sensor.position}%`).join(', ') : 'sin lecturas'}.

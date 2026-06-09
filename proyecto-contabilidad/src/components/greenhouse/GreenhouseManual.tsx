@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   CheckCircle2,
   Cpu,
@@ -266,219 +266,298 @@ function SafetyDiagram() {
   )
 }
 
+function GeneralManualContent() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <ManualSection icon={<Gauge className="h-5 w-5" />} title="Vista general para cualquier usuario">
+          <p className="text-sm leading-6 text-slate-600">
+            El invernadero funciona como un circuito cerrado de observacion y control. El ESP32 toma lecturas del
+            ambiente, suelo y tanque; Supabase guarda los datos; la pagina los muestra; y los comandos vuelven al ESP32
+            para encender o apagar actuadores.
+          </p>
+          <div className="mt-4 grid gap-2">
+            {systemSteps.map((step, index) => (
+              <div key={step} className="flex gap-3 rounded-xl bg-white px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-800">
+                  {index + 1}
+                </span>
+                <span>{step}</span>
+              </div>
+            ))}
+          </div>
+        </ManualSection>
+
+        <ArchitectureDiagram />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <ManualSection icon={<Cpu className="h-5 w-5" />} title="Equipo fisico">
+          <ul className="space-y-2 text-sm leading-6 text-slate-600">
+            <li><b>ESP32:</b> controlador WiFi que lee sensores y maneja reles.</li>
+            <li><b>DHT11:</b> temperatura y humedad ambiental.</li>
+            <li><b>Sensores de suelo:</b> humedad estimada por lectura analogica.</li>
+            <li><b>Flotadores:</b> bajo, medio y alto para saber el nivel del tanque.</li>
+            <li><b>Reles:</b> salida electrica para bomba de llenado/riego y luz.</li>
+          </ul>
+        </ManualSection>
+
+        <ManualSection icon={<Database className="h-5 w-5" />} title="Datos en Supabase">
+          <ul className="space-y-2 text-sm leading-6 text-slate-600">
+            <li><b>greenhouse_telemetry:</b> historial principal recibido desde el ESP32.</li>
+            <li><b>greenhouse_sensor_readings:</b> lecturas normalizadas por sensor.</li>
+            <li><b>greenhouse_commands:</b> cola de ordenes y respuestas.</li>
+            <li><b>project_greenhouse_integrations:</b> enlace entre proyecto y equipo.</li>
+            <li><b>greenhouse_firmware_releases:</b> versiones OTA publicadas.</li>
+          </ul>
+        </ManualSection>
+
+        <ManualSection icon={<Smartphone className="h-5 w-5" />} title="Interfaces">
+          <ul className="space-y-2 text-sm leading-6 text-slate-600">
+            <li><b>Pagina FHF:</b> tablero visual para monitoreo y estado historico.</li>
+            <li><b>Telegram:</b> bot local para consultar, analizar y crear comandos.</li>
+            <li><b>Serial USB:</b> diagnostico directo cuando el equipo esta en mesa.</li>
+            <li><b>Supabase UI:</b> auditoria de datos, comandos y releases OTA.</li>
+          </ul>
+        </ManualSection>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+        <DataFlowDiagram />
+        <ManualSection icon={<RadioTower className="h-5 w-5" />} title="Ciclo de datos y comandos">
+          <div className="space-y-3 text-sm leading-6 text-slate-600">
+            <p>
+              La telemetria fluye desde el ESP32 hacia Supabase. Los comandos fluyen en sentido contrario: primero se
+              crean como pendientes, luego el ESP32 los reclama, ejecuta y confirma con un resultado JSON.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {commandLifecycle.map(([state, detail]) => (
+                <div key={state} className="rounded-xl bg-white p-3 ring-1 ring-slate-200">
+                  <p className="font-mono text-xs font-bold uppercase text-slate-900">{state}</p>
+                  <p className="mt-1 text-xs text-slate-600">{detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </ManualSection>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <ManualSection icon={<ShieldCheck className="h-5 w-5" />} title="Seguridad de bomba y tanque">
+          <div className="space-y-3 text-sm leading-6 text-slate-600">
+            <p>
+              La bomba nunca debe depender solo de una orden remota. El firmware aplica reglas locales: no activa si el
+              tanque esta bajo, se apaga al cumplir el tiempo maximo y bloquea el auto-llenado despues de una parada de
+              seguridad.
+            </p>
+            <div className="grid gap-2">
+              {operatorChecks.map((check) => (
+                <div key={check} className="flex gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                  <span>{check}</span>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">
+              <b>Regla critica:</b> si la bomba se apaga por timeout de 15 minutos, <code>FILL ON</code> queda bloqueado.
+              Solo <code>FILL_FORCE_ON</code> rearma el sistema despues de una revision humana.
+            </div>
+          </div>
+        </ManualSection>
+
+        <SafetyDiagram />
+      </div>
+    </div>
+  )
+}
+
+function TechnicalManualContent() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ManualSection icon={<HardDriveUpload className="h-5 w-5" />} title="Actualizaciones OTA por Supabase">
+          <ol className="space-y-2 text-sm leading-6 text-slate-600">
+            <li>1. Se compila un binario nuevo del firmware ESP32.</li>
+            <li>2. El binario se sube al bucket publico <code>greenhouse-firmware</code>.</li>
+            <li>3. Se registra version, modelo, URL, tamano y SHA256 en Supabase.</li>
+            <li>4. El ESP32 consulta si hay version nueva para su modelo.</li>
+            <li>5. Descarga, valida hash, escribe en flash y reinicia.</li>
+          </ol>
+          <p className="mt-3 rounded-xl bg-white p-3 text-xs leading-5 text-slate-600 ring-1 ring-slate-200">
+            La validacion SHA256 evita instalar archivos incompletos o distintos al binario publicado.
+          </p>
+        </ManualSection>
+
+        <ManualSection icon={<KeyRound className="h-5 w-5" />} title="Permisos y credenciales">
+          <ul className="space-y-2 text-sm leading-6 text-slate-600">
+            <li><b>Anon key:</b> lectura controlada desde web y bot mediante RLS.</li>
+            <li><b>Service role:</b> solo para tareas de servidor, publicacion OTA y administracion.</li>
+            <li><b>Device token:</b> identifica al ESP32 ante RPCs de telemetria y comandos.</li>
+            <li><b>Bot token:</b> permite al agente crear comandos sin exponer credenciales de dispositivo.</li>
+          </ul>
+          <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-800">
+            Nunca publiques <code>.env</code>, tokens de Telegram, service role key o device token en GitHub.
+          </p>
+        </ManualSection>
+      </div>
+
+      <ManualSection icon={<TerminalSquare className="h-5 w-5" />} title="Referencia tecnica para programadores">
+        <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+          <div>
+            <h5 className="font-semibold text-slate-900">Archivos importantes</h5>
+            <div className="mt-3 space-y-2">
+              {developerFiles.map((file) => (
+                <div key={file.path} className="rounded-xl bg-white p-3 ring-1 ring-slate-200">
+                  <p className="font-mono text-xs font-bold text-slate-900">{file.path}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">{file.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h5 className="font-semibold text-slate-900">Campos clave del payload</h5>
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <table className="w-full text-left text-xs">
+                <tbody>
+                  {payloadFields.map(([field, detail]) => (
+                    <tr key={field} className="border-b border-slate-100 last:border-0">
+                      <td className="w-[42%] px-3 py-2 font-mono font-semibold text-slate-900">{field}</td>
+                      <td className="px-3 py-2 leading-5 text-slate-600">{detail}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h5 className="mt-5 font-semibold text-slate-900">Comandos reconocidos</h5>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {['STATUS', 'FILL ON', 'FILL OFF', 'FILL_FORCE_ON', 'PUMP_UNLOCK', 'SET_PUMP <segundos>', 'LIGHT_ON', 'LIGHT_OFF'].map((command) => (
+                <Pill key={command}>{command}</Pill>
+              ))}
+            </div>
+          </div>
+        </div>
+      </ManualSection>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <Wrench className="h-5 w-5 text-emerald-700" />
+          <h4 className="mt-3 font-bold text-emerald-950">Mantenimiento</h4>
+          <p className="mt-2 text-sm leading-6 text-emerald-900">
+            Revisa conexiones, humedad en cajas electricas, estado de flotadores y limpieza del tanque antes de confiar
+            en operaciones automaticas.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+          <GitBranch className="h-5 w-5 text-sky-700" />
+          <h4 className="mt-3 font-bold text-sky-950">Versionamiento</h4>
+          <p className="mt-2 text-sm leading-6 text-sky-900">
+            Cada firmware debe aumentar <code>FIRMWARE_VERSION</code>; la pagina reporta la version instalada desde
+            telemetria.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+          <Lock className="h-5 w-5 text-rose-700" />
+          <h4 className="mt-3 font-bold text-rose-950">Fallas esperadas</h4>
+          <p className="mt-2 text-sm leading-6 text-rose-900">
+            Si la telemetria esta vieja, no tomes decisiones operativas. Si hay bloqueo de bomba, revisa nivel, reles y
+            tuberia antes de forzar.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function GreenhouseManual() {
+  const [selectedManual, setSelectedManual] = useState<'general' | 'technical' | null>(null)
+
   return (
     <Card id="manual-invernadero" className="bg-white/90">
       <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
           <Pill>
             <FileText className="mr-2 h-3.5 w-3.5 text-primary-700" />
-            Manual operativo
+            Manual oculto
           </Pill>
           <Pill>
             <TerminalSquare className="mr-2 h-3.5 w-3.5 text-slate-600" />
-            Guia tecnica
+            Dos versiones separadas
           </Pill>
         </div>
         <CardTitle className="text-slate-900">Manual del sistema de invernadero inteligente</CardTitle>
         <CardDescription>
-          Guia para operar, mantener y entender internamente el sistema FHF: sensores, Supabase, pagina web, Telegram,
-          seguridad de bomba y actualizaciones OTA.
+          Elige que nivel de informacion quieres abrir. La version general explica el sistema para operar y entenderlo
+          rapido; la version tecnica muestra detalles internos para desarrollo, soporte y mantenimiento.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <ManualSection icon={<Gauge className="h-5 w-5" />} title="Vista general para cualquier usuario">
-            <p className="text-sm leading-6 text-slate-600">
-              El invernadero funciona como un circuito cerrado de observacion y control. El ESP32 toma lecturas del
-              ambiente, suelo y tanque; Supabase guarda los datos; la pagina los muestra; y los comandos vuelven al ESP32
-              para encender o apagar actuadores.
-            </p>
-            <div className="mt-4 grid gap-2">
-              {systemSteps.map((step, index) => (
-                <div key={step} className="flex gap-3 rounded-xl bg-white px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-800">
-                    {index + 1}
-                  </span>
-                  <span>{step}</span>
-                </div>
-              ))}
-            </div>
-          </ManualSection>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setSelectedManual(selectedManual === 'general' ? null : 'general')}
+            className={`rounded-2xl border p-5 text-left transition ${
+              selectedManual === 'general'
+                ? 'border-emerald-300 bg-emerald-50 shadow-[0_12px_28px_rgba(16,185,129,0.14)]'
+                : 'border-slate-200 bg-slate-50 hover:border-emerald-300 hover:bg-emerald-50/70'
+            }`}
+            aria-expanded={selectedManual === 'general'}
+            aria-controls="manual-general"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-700 ring-1 ring-emerald-200">
+              <Gauge className="h-5 w-5" />
+            </span>
+            <span className="mt-4 block text-lg font-bold text-slate-900">Version general</span>
+            <span className="mt-1 block text-sm leading-6 text-slate-600">
+              Para cualquier persona: que es el sistema, que partes tiene, como fluye la informacion y que reglas de
+              seguridad debe respetar.
+            </span>
+          </button>
 
-          <ArchitectureDiagram />
+          <button
+            type="button"
+            onClick={() => setSelectedManual(selectedManual === 'technical' ? null : 'technical')}
+            className={`rounded-2xl border p-5 text-left transition ${
+              selectedManual === 'technical'
+                ? 'border-sky-300 bg-sky-50 shadow-[0_12px_28px_rgba(14,165,233,0.14)]'
+                : 'border-slate-200 bg-slate-50 hover:border-sky-300 hover:bg-sky-50/70'
+            }`}
+            aria-expanded={selectedManual === 'technical'}
+            aria-controls="manual-tecnico"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sky-700 ring-1 ring-sky-200">
+              <TerminalSquare className="h-5 w-5" />
+            </span>
+            <span className="mt-4 block text-lg font-bold text-slate-900">Version tecnica</span>
+            <span className="mt-1 block text-sm leading-6 text-slate-600">
+              Para programadores y soporte: archivos, tablas, payloads, comandos, credenciales, OTA y mantenimiento
+              interno.
+            </span>
+          </button>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-3">
-          <ManualSection icon={<Cpu className="h-5 w-5" />} title="Equipo fisico">
-            <ul className="space-y-2 text-sm leading-6 text-slate-600">
-              <li><b>ESP32:</b> controlador WiFi que lee sensores y maneja reles.</li>
-              <li><b>DHT11:</b> temperatura y humedad ambiental.</li>
-              <li><b>Sensores de suelo:</b> humedad estimada por lectura analogica.</li>
-              <li><b>Flotadores:</b> bajo, medio y alto para saber el nivel del tanque.</li>
-              <li><b>Reles:</b> salida electrica para bomba de llenado/riego y luz.</li>
-            </ul>
-          </ManualSection>
-
-          <ManualSection icon={<Database className="h-5 w-5" />} title="Datos en Supabase">
-            <ul className="space-y-2 text-sm leading-6 text-slate-600">
-              <li><b>greenhouse_telemetry:</b> historial principal recibido desde el ESP32.</li>
-              <li><b>greenhouse_sensor_readings:</b> lecturas normalizadas por sensor.</li>
-              <li><b>greenhouse_commands:</b> cola de ordenes y respuestas.</li>
-              <li><b>project_greenhouse_integrations:</b> enlace entre proyecto y equipo.</li>
-              <li><b>greenhouse_firmware_releases:</b> versiones OTA publicadas.</li>
-            </ul>
-          </ManualSection>
-
-          <ManualSection icon={<Smartphone className="h-5 w-5" />} title="Interfaces">
-            <ul className="space-y-2 text-sm leading-6 text-slate-600">
-              <li><b>Pagina FHF:</b> tablero visual para monitoreo y estado historico.</li>
-              <li><b>Telegram:</b> bot local para consultar, analizar y crear comandos.</li>
-              <li><b>Serial USB:</b> diagnostico directo cuando el equipo esta en mesa.</li>
-              <li><b>Supabase UI:</b> auditoria de datos, comandos y releases OTA.</li>
-            </ul>
-          </ManualSection>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-          <DataFlowDiagram />
-          <ManualSection icon={<RadioTower className="h-5 w-5" />} title="Ciclo de datos y comandos">
-            <div className="space-y-3 text-sm leading-6 text-slate-600">
-              <p>
-                La telemetria fluye desde el ESP32 hacia Supabase. Los comandos fluyen en sentido contrario: primero se
-                crean como pendientes, luego el ESP32 los reclama, ejecuta y confirma con un resultado JSON.
-              </p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {commandLifecycle.map(([state, detail]) => (
-                  <div key={state} className="rounded-xl bg-white p-3 ring-1 ring-slate-200">
-                    <p className="font-mono text-xs font-bold uppercase text-slate-900">{state}</p>
-                    <p className="mt-1 text-xs text-slate-600">{detail}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </ManualSection>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-          <ManualSection icon={<ShieldCheck className="h-5 w-5" />} title="Seguridad de bomba y tanque">
-            <div className="space-y-3 text-sm leading-6 text-slate-600">
-              <p>
-                La bomba nunca debe depender solo de una orden remota. El firmware aplica reglas locales: no activa si el
-                tanque esta bajo, se apaga al cumplir el tiempo maximo y bloquea el auto-llenado despues de una parada de
-                seguridad.
-              </p>
-              <div className="grid gap-2">
-                {operatorChecks.map((check) => (
-                  <div key={check} className="flex gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <span>{check}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">
-                <b>Regla critica:</b> si la bomba se apaga por timeout de 15 minutos, <code>FILL ON</code> queda bloqueado.
-                Solo <code>FILL_FORCE_ON</code> rearma el sistema despues de una revision humana.
-              </div>
-            </div>
-          </ManualSection>
-
-          <SafetyDiagram />
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          <ManualSection icon={<HardDriveUpload className="h-5 w-5" />} title="Actualizaciones OTA por Supabase">
-            <ol className="space-y-2 text-sm leading-6 text-slate-600">
-              <li>1. Se compila un binario nuevo del firmware ESP32.</li>
-              <li>2. El binario se sube al bucket publico <code>greenhouse-firmware</code>.</li>
-              <li>3. Se registra version, modelo, URL, tamano y SHA256 en Supabase.</li>
-              <li>4. El ESP32 consulta si hay version nueva para su modelo.</li>
-              <li>5. Descarga, valida hash, escribe en flash y reinicia.</li>
-            </ol>
-            <p className="mt-3 rounded-xl bg-white p-3 text-xs leading-5 text-slate-600 ring-1 ring-slate-200">
-              La validacion SHA256 evita instalar archivos incompletos o distintos al binario publicado.
-            </p>
-          </ManualSection>
-
-          <ManualSection icon={<KeyRound className="h-5 w-5" />} title="Permisos y credenciales">
-            <ul className="space-y-2 text-sm leading-6 text-slate-600">
-              <li><b>Anon key:</b> lectura controlada desde web y bot mediante RLS.</li>
-              <li><b>Service role:</b> solo para tareas de servidor, publicacion OTA y administracion.</li>
-              <li><b>Device token:</b> identifica al ESP32 ante RPCs de telemetria y comandos.</li>
-              <li><b>Bot token:</b> permite al agente crear comandos sin exponer credenciales de dispositivo.</li>
-            </ul>
-            <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-800">
-              Nunca publiques <code>.env</code>, tokens de Telegram, service role key o device token en GitHub.
-            </p>
-          </ManualSection>
-        </div>
-
-        <ManualSection icon={<TerminalSquare className="h-5 w-5" />} title="Referencia tecnica para programadores">
-          <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-            <div>
-              <h5 className="font-semibold text-slate-900">Archivos importantes</h5>
-              <div className="mt-3 space-y-2">
-                {developerFiles.map((file) => (
-                  <div key={file.path} className="rounded-xl bg-white p-3 ring-1 ring-slate-200">
-                    <p className="font-mono text-xs font-bold text-slate-900">{file.path}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-600">{file.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h5 className="font-semibold text-slate-900">Campos clave del payload</h5>
-              <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                <table className="w-full text-left text-xs">
-                  <tbody>
-                    {payloadFields.map(([field, detail]) => (
-                      <tr key={field} className="border-b border-slate-100 last:border-0">
-                        <td className="w-[42%] px-3 py-2 font-mono font-semibold text-slate-900">{field}</td>
-                        <td className="px-3 py-2 leading-5 text-slate-600">{detail}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <h5 className="mt-5 font-semibold text-slate-900">Comandos reconocidos</h5>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {['STATUS', 'FILL ON', 'FILL OFF', 'FILL_FORCE_ON', 'PUMP_UNLOCK', 'SET_PUMP <segundos>', 'LIGHT_ON', 'LIGHT_OFF'].map((command) => (
-                  <Pill key={command}>{command}</Pill>
-                ))}
-              </div>
-            </div>
-          </div>
-        </ManualSection>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-            <Wrench className="h-5 w-5 text-emerald-700" />
-            <h4 className="mt-3 font-bold text-emerald-950">Mantenimiento</h4>
-            <p className="mt-2 text-sm leading-6 text-emerald-900">
-              Revisa conexiones, humedad en cajas electricas, estado de flotadores y limpieza del tanque antes de confiar
-              en operaciones automaticas.
+        {!selectedManual && (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+            <FileText className="mx-auto h-8 w-8 text-slate-400" />
+            <p className="mt-3 text-sm font-semibold text-slate-700">
+              La informacion esta oculta hasta que selecciones una version del manual.
             </p>
           </div>
-          <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-            <GitBranch className="h-5 w-5 text-sky-700" />
-            <h4 className="mt-3 font-bold text-sky-950">Versionamiento</h4>
-            <p className="mt-2 text-sm leading-6 text-sky-900">
-              Cada firmware debe aumentar <code>FIRMWARE_VERSION</code>; la pagina reporta la version instalada desde
-              telemetria.
-            </p>
+        )}
+
+        {selectedManual === 'general' && (
+          <div id="manual-general">
+            <GeneralManualContent />
           </div>
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-            <Lock className="h-5 w-5 text-rose-700" />
-            <h4 className="mt-3 font-bold text-rose-950">Fallas esperadas</h4>
-            <p className="mt-2 text-sm leading-6 text-rose-900">
-              Si la telemetria esta vieja, no tomes decisiones operativas. Si hay bloqueo de bomba, revisa nivel, reles y
-              tuberia antes de forzar.
-            </p>
+        )}
+
+        {selectedManual === 'technical' && (
+          <div id="manual-tecnico">
+            <TechnicalManualContent />
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   )

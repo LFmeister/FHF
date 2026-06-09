@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import {
   Activity,
   AlertTriangle,
+  BookOpen,
   Clock3,
   Droplets,
   Leaf,
@@ -19,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
+import { GreenhouseManual } from '@/components/greenhouse/GreenhouseManual'
 import { greenhouseService, type ProjectGreenhouseDashboard } from '@/lib/greenhouse'
 import { permissions, type UserRole } from '@/lib/permissions'
 
@@ -666,6 +668,13 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                   ? 'Monitorea temperatura, humedad, nivel de tanque y actividad de actuadores desde el panel del proyecto.'
                   : 'Pega el codigo del invernadero para activar un dashboard tecnico dentro del proyecto.'}
               </CardDescription>
+              <a
+                href="#manual-invernadero"
+                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+              >
+                <BookOpen className="h-4 w-4" />
+                Ver manual del sistema
+              </a>
             </div>
           </CardHeader>
 
@@ -753,6 +762,8 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
           </CardContent>
         </Card>
       </div>
+
+      <GreenhouseManual />
 
       {dashboard ? (
         <>
@@ -996,4 +1007,3 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
     </div>
   )
 }
-

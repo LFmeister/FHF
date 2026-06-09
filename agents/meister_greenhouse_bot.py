@@ -1,6 +1,11 @@
 import json
 import os
+import re
+import shlex
+import subprocess
+import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -21,6 +26,45 @@ SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
 GREENHOUSE_DEVICE_ID = os.environ["GREENHOUSE_DEVICE_ID"]
 GREENHOUSE_BOT_COMMAND_TOKEN = os.getenv("GREENHOUSE_BOT_COMMAND_TOKEN", "")
 MAX_IRRIGATION_SECONDS = int(os.getenv("MAX_IRRIGATION_SECONDS", "120"))
+GREENHOUSE_BOT_VOICE_ENABLED = os.getenv("GREENHOUSE_BOT_VOICE_ENABLED", "true").lower() in (
+    "1",
+    "true",
+    "yes",
+    "si",
+)
+GREENHOUSE_BOT_VOICE_ENGINE = os.getenv("GREENHOUSE_BOT_VOICE_ENGINE", "piper").lower()
+GREENHOUSE_BOT_VOICE_MAX_CHARS = int(os.getenv("GREENHOUSE_BOT_VOICE_MAX_CHARS", "900"))
+GREENHOUSE_BOT_VOICE_STATE_FILE = Path(
+    os.getenv(
+        "GREENHOUSE_BOT_VOICE_STATE_FILE",
+        str(Path(__file__).with_name(".greenhouse_bot_voice.json")),
+    )
+)
+DEFAULT_PIPER_BIN = Path(__file__).with_name(".venv-piper") / "bin" / "piper"
+PIPER_BIN = os.getenv(
+    "PIPER_BIN",
+    str(DEFAULT_PIPER_BIN) if DEFAULT_PIPER_BIN.exists() else "piper",
+)
+PIPER_VOICE_MODEL = os.getenv(
+    "PIPER_VOICE_MODEL",
+    str(Path.home() / "piper-voices" / "es_ES-mls_9972-low.onnx"),
+)
+FFMPEG_BIN = os.getenv("FFMPEG_BIN", "ffmpeg")
+TTS_COMMAND = os.getenv("TTS_COMMAND", "")
+PIPER_VOICE_NAME = os.getenv("PIPER_VOICE_NAME", "").strip().lower()
+
+PIPER_VOICES = {
+    "sofia": {
+        "display_name": "Sofia",
+        "model": str(Path.home() / "piper-voices" / "es_ES-mls_9972-low.onnx"),
+        "description": "Espanol de Espana, mls_9972 low. Candidata mas suave/femenina instalada.",
+    },
+    "pedro": {
+        "display_name": "Pedro",
+        "model": str(Path.home() / "piper-voices" / "es_ES-davefx-medium.onnx"),
+        "description": "Espanol de Espana, davefx medium. Voz mas grave/masculina instalada.",
+    },
+}
 
 supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
@@ -33,6 +77,192 @@ Si el usuario pide prender bomba, riego o luces, responde que primero se deben v
 Nunca recomiendes encender la bomba si el tanque esta bajo o sin datos confiables.
 Si los datos del invernadero no son recientes, dilo claramente y no saques conclusiones operativas.
 """
+
+
+def voice_safe_text(text: str) -> str:
+    cleaned = re.sub(r"https?://\S+", " enlace ", text)
+    cleaned = re.sub(r"[#*_`|>\[\](){}]", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned[:GREENHOUSE_BOT_VOICE_MAX_CHARS]
+
+
+def normalize_voice_name(name: str) -> str:
+    return re.sub(r"[^a-z0-9_-]", "", name.strip().lower())
+
+
+def read_selected_voice_name() -> str:
+    try:
+        if GREENHOUSE_BOT_VOICE_STATE_FILE.exists():
+            data = json.loads(GREENHOUSE_BOT_VOICE_STATE_FILE.read_text(encoding="utf-8"))
+            selected = normalize_voice_name(str(data.get("voice") or ""))
+            if selected in PIPER_VOICES:
+                return selected
+    except Exception as exc:
+        print(f"No pude leer la voz seleccionada: {exc}")
+
+    if PIPER_VOICE_NAME in PIPER_VOICES:
+        return PIPER_VOICE_NAME
+
+    configured_model = str(Path(PIPER_VOICE_MODEL).expanduser())
+    for name, config in PIPER_VOICES.items():
+        if str(Path(config["model"]).expanduser()) == configured_model:
+            return name
+
+    return "sofia"
+
+
+def write_selected_voice_name(name: str) -> None:
+    GREENHOUSE_BOT_VOICE_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    GREENHOUSE_BOT_VOICE_STATE_FILE.write_text(
+        json.dumps({"voice": name}, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
+
+
+def get_voice_config(name: str | None = None) -> tuple[str, dict[str, str]]:
+    selected = normalize_voice_name(name or "") or read_selected_voice_name()
+    if selected not in PIPER_VOICES:
+        raise ValueError(f"Voz desconocida: {name}")
+
+    return selected, PIPER_VOICES[selected]
+
+
+def get_piper_model_path(voice_name: str | None = None) -> Path:
+    if voice_name:
+        _, config = get_voice_config(voice_name)
+        return Path(config["model"]).expanduser()
+
+    selected = read_selected_voice_name()
+    if selected in PIPER_VOICES:
+        return Path(PIPER_VOICES[selected]["model"]).expanduser()
+
+    return Path(PIPER_VOICE_MODEL).expanduser()
+
+
+def format_voice_list() -> str:
+    selected = read_selected_voice_name()
+    lines = [
+        "Voces disponibles:",
+    ]
+
+    for name, config in PIPER_VOICES.items():
+        marker = "activa" if name == selected else "disponible"
+        model_path = Path(config["model"]).expanduser()
+        installed = "instalada" if model_path.exists() else "no instalada"
+        lines.append(
+            f"- /voces {name} - {config['display_name']} ({marker}, {installed}): {config['description']}"
+        )
+
+    lines.extend(
+        [
+            "",
+            "Uso: /voces nombre. Ejemplo: /voces sofia",
+            "Para volver a oir una muestra de la actual: /voces actual",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def run_command(command: list[str], input_text: str | None = None) -> None:
+    subprocess.run(
+        command,
+        input=input_text,
+        text=input_text is not None,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        timeout=90,
+    )
+
+
+def synthesize_with_piper(text: str, wav_path: Path, voice_name: str | None = None) -> None:
+    model_path = get_piper_model_path(voice_name)
+    if not model_path.exists():
+        raise FileNotFoundError(f"No existe el modelo de voz Piper: {model_path}")
+
+    run_command(
+        [
+            PIPER_BIN,
+            "--model",
+            str(model_path),
+            "--output_file",
+            str(wav_path),
+        ],
+        input_text=text,
+    )
+
+
+def synthesize_with_command(text: str, wav_path: Path, text_path: Path) -> None:
+    if not TTS_COMMAND.strip():
+        raise RuntimeError("Falta TTS_COMMAND para GREENHOUSE_BOT_VOICE_ENGINE=command.")
+
+    text_path.write_text(text, encoding="utf-8")
+    command = [
+        part.format(input=str(text_path), output=str(wav_path), text=text)
+        for part in shlex.split(TTS_COMMAND)
+    ]
+    run_command(command)
+
+
+def convert_wav_to_telegram_voice(wav_path: Path, ogg_path: Path) -> None:
+    run_command(
+        [
+            FFMPEG_BIN,
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            str(wav_path),
+            "-c:a",
+            "libopus",
+            "-b:a",
+            "32k",
+            str(ogg_path),
+        ]
+    )
+
+
+def synthesize_voice_note(text: str, directory: Path, voice_name: str | None = None) -> Path:
+    speech_text = voice_safe_text(text)
+    if not speech_text:
+        raise RuntimeError("No hay texto util para sintetizar voz.")
+
+    wav_path = directory / "respuesta.wav"
+    ogg_path = directory / "respuesta.ogg"
+    text_path = directory / "respuesta.txt"
+
+    if GREENHOUSE_BOT_VOICE_ENGINE == "piper":
+        synthesize_with_piper(speech_text, wav_path, voice_name)
+    elif GREENHOUSE_BOT_VOICE_ENGINE == "command":
+        synthesize_with_command(speech_text, wav_path, text_path)
+    else:
+        raise RuntimeError(f"Motor de voz no soportado: {GREENHOUSE_BOT_VOICE_ENGINE}")
+
+    convert_wav_to_telegram_voice(wav_path, ogg_path)
+    return ogg_path
+
+
+async def reply_voice_sample(update: Update, text: str, voice_name: str | None = None) -> bool:
+    if not GREENHOUSE_BOT_VOICE_ENABLED:
+        return False
+
+    try:
+        await update.message.chat.send_action(action="record_voice")
+        with tempfile.TemporaryDirectory(prefix="fhf-bot-voice-") as tmp_dir:
+            voice_path = synthesize_voice_note(text, Path(tmp_dir), voice_name)
+            with voice_path.open("rb") as voice_file:
+                await update.message.reply_voice(voice=voice_file)
+        return True
+    except Exception as exc:
+        print(f"No pude generar nota de voz: {exc}")
+        return False
+
+
+async def reply_text_and_voice(update: Update, text: str) -> None:
+    message = text[:4000]
+    await update.message.reply_text(message)
+    await reply_voice_sample(update, message)
 
 
 def ask_ollama(user_text: str, context: str = "") -> str:
@@ -535,13 +765,15 @@ def format_command(command: dict[str, Any]) -> str:
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
+    await reply_text_and_voice(
+        update,
         "Hola. Soy Meister Greenhouse AI, la IA local del invernadero FHF. Usa /ayuda para ver comandos."
     )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
+    await reply_text_and_voice(
+        update,
         "\n".join(
             [
                 "Comandos disponibles:",
@@ -549,6 +781,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 "/analizar - Analizar datos recientes con IA local",
                 "/diagnostico - Revisar conexion con Supabase",
                 "/comandos - Ver comandos recientes enviados al Arduino",
+                "/voces - Ver y cambiar la voz del bot. Ejemplo: /voces sofia",
                 f"/regar SEGUNDOS - Crear riego seguro. Maximo {MAX_IRRIGATION_SECONDS}s",
                 "/bomba_off - Crear comando para apagar bomba",
                 "/luz_on - Crear comando para encender luz",
@@ -564,7 +797,7 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as exc:
         message = f"No pude leer Supabase. Error: {exc}"
 
-    await update.message.reply_text(message[:4000])
+    await reply_text_and_voice(update, message)
 
 
 async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -578,7 +811,7 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 f"{freshness_message(recorded_at)}\n\n"
                 "Primero confirma que el Arduino/ESP32 este enviando datos nuevos a Supabase."
             )
-            await update.message.reply_text(message[:4000])
+            await reply_text_and_voice(update, message)
             return
 
         greenhouse_context = get_greenhouse_status()
@@ -589,7 +822,7 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as exc:
         answer = f"No pude analizar el invernadero. Error: {exc}"
 
-    await update.message.reply_text(answer[:4000])
+    await reply_text_and_voice(update, answer)
 
 
 async def diagnostics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -598,7 +831,7 @@ async def diagnostics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     except Exception as exc:
         message = f"No pude ejecutar diagnostico. Error: {exc}"
 
-    await update.message.reply_text(message[:4000])
+    await reply_text_and_voice(update, message)
 
 
 async def commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -611,18 +844,97 @@ async def commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as exc:
         message = f"No pude leer comandos. Error: {exc}"
 
-    await update.message.reply_text(message[:4000])
+    await reply_text_and_voice(update, message)
+
+
+async def voices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        if GREENHOUSE_BOT_VOICE_ENGINE != "piper":
+            await update.message.reply_text(
+                "El motor de voz actual no es Piper. /voces solo cambia voces Piper configuradas.",
+            )
+            return
+
+        if not context.args:
+            selected, config = get_voice_config()
+            await update.message.reply_text(format_voice_list())
+            sent = await reply_voice_sample(
+                update,
+                f"Esta es una muestra de la voz activa {config['display_name']} para Meister Greenhouse.",
+                selected,
+            )
+            if not sent and GREENHOUSE_BOT_VOICE_ENABLED:
+                await update.message.reply_text("No pude enviar la muestra de voz. Revisa Piper y ffmpeg en el servidor.")
+            return
+
+        requested = normalize_voice_name(context.args[0])
+        if requested in ("actual", "activa"):
+            selected, config = get_voice_config()
+            await update.message.reply_text(
+                (
+                    f"Voz activa: {config['display_name']} (/voces {selected}). "
+                    f"{config['description']}"
+                ),
+            )
+            sent = await reply_voice_sample(
+                update,
+                f"Esta es una muestra de la voz activa {config['display_name']} para Meister Greenhouse.",
+                selected,
+            )
+            if not sent and GREENHOUSE_BOT_VOICE_ENABLED:
+                await update.message.reply_text("No pude enviar la muestra de voz. Revisa Piper y ffmpeg en el servidor.")
+            return
+
+        if requested not in PIPER_VOICES:
+            await update.message.reply_text(
+                f"No conozco la voz '{context.args[0]}'.\n\n{format_voice_list()}",
+            )
+            return
+
+        _, config = get_voice_config(requested)
+        model_path = Path(config["model"]).expanduser()
+        if not model_path.exists():
+            await update.message.reply_text(
+                (
+                    f"La voz {config['display_name']} existe en la lista, pero falta el modelo:\n"
+                    f"{model_path}"
+                ),
+            )
+            return
+
+        write_selected_voice_name(requested)
+        await update.message.reply_text(
+            (
+                f"Voz activa cambiada a {config['display_name']} (/voces {requested}). "
+                f"{config['description']}"
+            ),
+        )
+        sent = await reply_voice_sample(
+            update,
+            f"Voz cambiada a {config['display_name']}. Esta es la muestra para Meister Greenhouse.",
+            requested,
+        )
+        if not sent and GREENHOUSE_BOT_VOICE_ENABLED:
+            await update.message.reply_text("La voz quedo seleccionada, pero no pude enviar la muestra. Revisa Piper y ffmpeg.")
+    except Exception as exc:
+        await update.message.reply_text(f"No pude cambiar la voz. Error: {exc}")
 
 
 async def irrigate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         if not context.args:
-            await update.message.reply_text(f"Uso: /regar SEGUNDOS. Ejemplo: /regar 30. Maximo: {MAX_IRRIGATION_SECONDS}s.")
+            await reply_text_and_voice(
+                update,
+                f"Uso: /regar SEGUNDOS. Ejemplo: /regar 30. Maximo: {MAX_IRRIGATION_SECONDS}s.",
+            )
             return
 
         seconds = int(context.args[0])
         if seconds <= 0 or seconds > MAX_IRRIGATION_SECONDS:
-            await update.message.reply_text(f"La duracion debe estar entre 1 y {MAX_IRRIGATION_SECONDS} segundos.")
+            await reply_text_and_voice(
+                update,
+                f"La duracion debe estar entre 1 y {MAX_IRRIGATION_SECONDS} segundos.",
+            )
             return
 
         ensure_fresh_telemetry_for_action()
@@ -648,7 +960,7 @@ async def irrigate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as exc:
         message = f"No pude crear el comando de riego. Error: {exc}"
 
-    await update.message.reply_text(message[:4000])
+    await reply_text_and_voice(update, message)
 
 
 async def pump_off(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -666,7 +978,7 @@ async def pump_off(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as exc:
         message = f"No pude crear el comando para apagar la bomba. Error: {exc}"
 
-    await update.message.reply_text(message[:4000])
+    await reply_text_and_voice(update, message)
 
 
 async def light_on(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -685,7 +997,7 @@ async def light_on(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as exc:
         message = f"No pude crear el comando para encender la luz. Error: {exc}"
 
-    await update.message.reply_text(message[:4000])
+    await reply_text_and_voice(update, message)
 
 
 async def light_off(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -703,7 +1015,7 @@ async def light_off(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as exc:
         message = f"No pude crear el comando para apagar la luz. Error: {exc}"
 
-    await update.message.reply_text(message[:4000])
+    await reply_text_and_voice(update, message)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -729,7 +1041,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception as exc:
         answer = f"No pude consultar la IA local. Error: {exc}"
 
-    await update.message.reply_text(answer[:4000])
+    await reply_text_and_voice(update, answer)
 
 
 def main() -> None:
@@ -741,6 +1053,7 @@ def main() -> None:
     app.add_handler(CommandHandler("analizar", analyze))
     app.add_handler(CommandHandler("diagnostico", diagnostics))
     app.add_handler(CommandHandler("comandos", commands))
+    app.add_handler(CommandHandler("voces", voices))
     app.add_handler(CommandHandler("regar", irrigate))
     app.add_handler(CommandHandler("bomba_off", pump_off))
     app.add_handler(CommandHandler("luz_on", light_on))

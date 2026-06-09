@@ -11,3 +11,7 @@ Thumbs.db
 .idea/
 .vscode/
 vendor/
+__pycache__/
+*.pyc
+agents/.venv-piper/
+agents/.greenhouse_bot_voice.json

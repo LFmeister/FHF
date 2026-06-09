@@ -29,13 +29,22 @@ interface GreenhouseTabProps {
   userRole: UserRole
 }
 
-function formatDateTime(value: string | null) {
+function formatDateTime(value: string | null, timeZone = 'America/Bogota') {
   if (!value) return 'Sin dato'
 
-  return new Intl.DateTimeFormat('es-CO', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
+  try {
+    return new Intl.DateTimeFormat('es-CO', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone,
+    }).format(new Date(value))
+  } catch {
+    return new Intl.DateTimeFormat('es-CO', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'America/Bogota',
+    }).format(new Date(value))
+  }
 }
 
 function formatDurationMs(value: number | null) {
@@ -688,7 +697,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
             <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
               <p className="text-xs uppercase tracking-wide text-white/70">Ultimo reporte</p>
               <p className="mt-2 text-sm font-semibold text-white">
-                {dashboard ? formatDateTime(dashboard.lastSeenAt || dashboard.latestTelemetry?.recorded_at || null) : 'Sin enlace'}
+                {dashboard ? formatDateTime(dashboard.lastSeenAt || dashboard.latestTelemetry?.recorded_at || null, dashboard.timezone) : 'Sin enlace'}
               </p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
@@ -876,7 +885,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                               <p className="font-semibold text-slate-900">{sensor.label}</p>
                               <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">{sensor.kind}</p>
                             </div>
-                            <span className="text-xs text-slate-500">{formatDateTime(sensor.recordedAt)}</span>
+                            <span className="text-xs text-slate-500">{formatDateTime(sensor.recordedAt, dashboard.timezone)}</span>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">
                             {sensor.metrics.filter(hasDisplayValue).slice(0, 8).map((reading) => (
@@ -908,7 +917,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                   <div key={`${item.recorded_at}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">{formatDateTime(item.recorded_at)}</p>
+                        <p className="text-sm font-semibold text-slate-900">{formatDateTime(item.recorded_at, dashboard.timezone)}</p>
                         <p className="text-xs uppercase tracking-wide text-slate-500">{item.source}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -952,7 +961,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                           </span>
                         </div>
                         {command.reason && <p className="mt-2 text-sm text-slate-600">{command.reason}</p>}
-                        <p className="mt-2 text-xs text-slate-500">Creado {formatDateTime(command.created_at)}</p>
+                        <p className="mt-2 text-xs text-slate-500">Creado {formatDateTime(command.created_at, dashboard.timezone)}</p>
                       </div>
                     ))
                   )}
@@ -984,7 +993,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                     </span>
                   </div>
                   <p>
-                    Conexion enlazada el {formatDateTime(dashboard.connectedAt)}. Este panel usa los campos definidos en la telemetria del invernadero.
+                    Conexion enlazada el {formatDateTime(dashboard.connectedAt, dashboard.timezone)}. Este panel usa los campos definidos en la telemetria del invernadero.
                   </p>
                 </CardContent>
               </Card>

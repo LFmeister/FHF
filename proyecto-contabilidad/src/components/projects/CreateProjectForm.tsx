@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { createProjectSchema, type CreateProjectInput } from '@/lib/validations'
 import { projectsService } from '@/lib/projects'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface CreateProjectFormProps {
   onSuccess?: () => void
@@ -18,6 +19,8 @@ export function CreateProjectForm({ onSuccess }: CreateProjectFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const { t } = useLanguage()
+  const tc = t.createProject
 
   const {
     register,
@@ -37,12 +40,12 @@ export function CreateProjectForm({ onSuccess }: CreateProjectFormProps) {
       setError('')
 
       const project = await projectsService.createProject(data)
-      
+
       reset()
       onSuccess?.()
       router.push(`/dashboard/project?id=${project.id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear el proyecto')
+      setError(err instanceof Error ? err.message : tc.error)
     } finally {
       setLoading(false)
     }
@@ -51,9 +54,9 @@ export function CreateProjectForm({ onSuccess }: CreateProjectFormProps) {
   return (
     <Card className="bg-white shadow-xl border-0">
       <CardHeader className="bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-t-lg">
-        <CardTitle className="text-xl">Crear Nuevo Proyecto</CardTitle>
+        <CardTitle className="text-xl">{tc.title}</CardTitle>
         <CardDescription className="text-primary-100">
-          Crea un proyecto para gestionar balances y gastos colaborativamente
+          {tc.subtitle}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
@@ -66,35 +69,35 @@ export function CreateProjectForm({ onSuccess }: CreateProjectFormProps) {
 
           <div>
             <label htmlFor="name" className="block text-sm font-semibold text-primary-800 mb-2">
-              Nombre del Proyecto
+              {tc.name}
             </label>
             <Input
               id="name"
               type="text"
               {...register('name')}
               error={errors.name?.message}
-              placeholder="Ej: Viaje a Europa 2024"
+              placeholder={tc.namePlaceholder}
               className="border-primary-200 focus:border-primary-500"
             />
           </div>
 
           <div>
             <label htmlFor="description" className="block text-sm font-semibold text-primary-800 mb-2">
-              Descripción (Opcional)
+              {tc.description}
             </label>
             <Input
               id="description"
               type="text"
               {...register('description')}
               error={errors.description?.message}
-              placeholder="Descripción del proyecto..."
+              placeholder={tc.descriptionPlaceholder}
               className="border-primary-200 focus:border-primary-500"
             />
           </div>
 
           <div className="bg-primary-50 p-4 rounded-lg border border-primary-200">
             <p className="text-sm text-primary-700">
-              <strong>Moneda:</strong> Peso Colombiano (COP) por defecto. Podrás cambiar a Dólar Australiano (AUD) desde la configuración del proyecto.
+              <strong>{tc.currencyLabel}</strong> {tc.currencyNote}
             </p>
           </div>
 
@@ -104,7 +107,7 @@ export function CreateProjectForm({ onSuccess }: CreateProjectFormProps) {
             className="w-full"
             size="lg"
           >
-            Crear Proyecto
+            {tc.submit}
           </Button>
         </form>
       </CardContent>

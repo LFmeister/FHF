@@ -8,6 +8,7 @@ import { Edit } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { inventoryService, type InventoryItem } from '@/lib/inventory'
+import { useLanguage } from '@/context/LanguageContext'
 
 const schema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -36,6 +37,9 @@ export function EditItemModal({ item, isOpen, onClose, onSuccess }: EditItemModa
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [displayUnitValue, setDisplayUnitValue] = useState('')
+  const { t } = useLanguage()
+  const ti = t.inventory
+  const tf = t.txForm
 
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -90,7 +94,7 @@ export function EditItemModal({ item, isOpen, onClose, onSuccess }: EditItemModa
       onSuccess()
       onClose()
     } catch (err: any) {
-      setError(err.message || 'Error al actualizar el producto')
+      setError(err.message || ti.updateError)
     } finally {
       setIsLoading(false)
     }
@@ -104,7 +108,7 @@ export function EditItemModal({ item, isOpen, onClose, onSuccess }: EditItemModa
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Edit className="h-5 w-5" />
-            <h2 className="text-xl font-semibold">Editar Producto</h2>
+            <h2 className="text-xl font-semibold">{ti.editTitle}</h2>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -117,7 +121,7 @@ export function EditItemModal({ item, isOpen, onClose, onSuccess }: EditItemModa
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label htmlFor="edit-name" className="text-sm font-medium block">
-                  Nombre *
+                  {ti.name}
                 </label>
                 <Input
                   id="edit-name"
@@ -128,7 +132,7 @@ export function EditItemModal({ item, isOpen, onClose, onSuccess }: EditItemModa
 
               <div className="space-y-2">
                 <label htmlFor="edit-unit-value" className="text-sm font-medium block">
-                  Valor Unitario (Opcional)
+                  {ti.unitValue}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-3 text-sm text-muted-foreground">$</span>
@@ -147,7 +151,7 @@ export function EditItemModal({ item, isOpen, onClose, onSuccess }: EditItemModa
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Formato automático (ej: 100.000)
+                  {tf.amountFormat}
                 </p>
                 {errors.unit_value && (
                   <p className="text-sm text-destructive">{errors.unit_value.message}</p>
@@ -157,12 +161,12 @@ export function EditItemModal({ item, isOpen, onClose, onSuccess }: EditItemModa
 
             <div className="space-y-2">
               <label htmlFor="edit-description" className="text-sm font-medium block">
-                Descripción (Opcional)
+                {tf.descriptionOptional}
               </label>
               <textarea
                 id="edit-description"
                 className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-                placeholder="Detalles del producto, proveedor, especificaciones técnicas..."
+                placeholder={ti.descPlaceholder}
                 {...register('description')}
               />
             </div>
@@ -174,10 +178,10 @@ export function EditItemModal({ item, isOpen, onClose, onSuccess }: EditItemModa
                 onClick={onClose}
                 disabled={isLoading}
               >
-                Cancelar
+                {t.common.cancel}
               </Button>
               <Button type="submit" loading={isLoading}>
-                Guardar Cambios
+                {t.common.saveChanges}
               </Button>
             </div>
           </form>

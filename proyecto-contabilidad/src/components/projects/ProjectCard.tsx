@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Calendar, Copy, Check, ArrowRight, FolderKanban, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface ProjectCardProps {
   project: {
@@ -22,6 +23,8 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const [copied, setCopied] = useState(false)
+  const { t } = useLanguage()
+  const tc = t.projectCard
 
   const copyInviteCode = async () => {
     try {
@@ -43,10 +46,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="min-w-0">
             <p className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
               <FolderKanban className="h-3.5 w-3.5" />
-              Proyecto
+              {tc.project}
             </p>
             <h3 className="mt-2 line-clamp-2 text-lg font-bold text-slate-900">{project.name}</h3>
-            <p className="mt-1 line-clamp-2 text-sm text-slate-600">{project.description || 'Sin descripcion.'}</p>
+            <p className="mt-1 line-clamp-2 text-sm text-slate-600">{project.description || tc.noDescription}</p>
           </div>
           <div className="flex flex-col items-end gap-2">
             <span
@@ -54,7 +57,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 isOwner ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-100 text-sky-800'
               }`}
             >
-              {isOwner ? 'Propietario' : 'Miembro'}
+              {isOwner ? tc.owner : tc.member}
             </span>
             <Link href={`/dashboard/project?id=${project.id}&tab=settings`}>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900">
@@ -68,16 +71,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="flex items-center justify-between text-xs text-slate-600">
             <span className="inline-flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
-              Creado
+              {tc.created}
             </span>
             <span className="font-semibold text-slate-700">
-              {new Date(project.created_at).toLocaleDateString('es-ES')}
+              {new Date(project.created_at).toLocaleDateString(t.locale)}
             </span>
           </div>
 
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Codigo de invitacion</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{tc.inviteCode}</p>
               <p className="truncate font-mono text-sm font-bold text-primary-800">{project.invite_code}</p>
             </div>
             <Button
@@ -85,7 +88,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               size="sm"
               onClick={copyInviteCode}
               className="h-8 w-8 p-0 text-slate-600 hover:bg-white"
-              title="Copiar codigo"
+              title={tc.copyCode}
             >
               {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
             </Button>
@@ -94,7 +97,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
         <Link href={`/dashboard/project?id=${project.id}`} className="block">
           <Button className="w-full justify-between">
-            Abrir proyecto
+            {tc.openProject}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Button>
         </Link>

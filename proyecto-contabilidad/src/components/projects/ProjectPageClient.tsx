@@ -28,6 +28,7 @@ import { AddLogbookEntryForm } from '@/components/logbook/AddLogbookEntryForm'
 import { LogbookList } from '@/components/logbook/LogbookList'
 import { logbookService, type LogbookEntry } from '@/lib/logbook'
 import { GreenhouseTab } from '@/components/greenhouse/GreenhouseTab'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface ProjectPageClientProps {
   projectId: string
@@ -37,6 +38,8 @@ interface ProjectPageClientProps {
 export default function ProjectPageClient({ projectId, initialTab }: ProjectPageClientProps) {
   const router = useRouter()
   const { success: showSuccess } = useToast()
+  const { t } = useLanguage()
+  const tp = t.project
 
   const [project, setProject] = useState<any>(null)
   const [income, setIncome] = useState<Income[]>([])
@@ -88,7 +91,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
 
   const handleDeleteProject = () => {
     if (!permissions.canManageProject(userRole)) {
-      alert('No tienes permisos para eliminar este proyecto')
+      alert(tp.noPermissionDelete)
       return
     }
     setShowDeleteModal(true)
@@ -100,11 +103,11 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
     try {
       await projectsService.deleteProject(projectId)
       setShowDeleteModal(false)
-      alert('Proyecto eliminado exitosamente')
+      alert(tp.deletedSuccess)
       router.push('/dashboard')
     } catch (error) {
       console.error('Error al eliminar proyecto:', error)
-      alert('Error al eliminar el proyecto. Intenta nuevamente.')
+      alert(tp.deleteError)
     } finally {
       setDeletingProject(false)
     }
@@ -151,7 +154,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
       const incomeData = await incomeService.getProjectIncome(projectId)
       setIncome(incomeData)
       setShowAddIncome(false)
-      showSuccess('Ingreso agregado exitosamente')
+      showSuccess(tp.incomeAdded)
     } catch (error) {
       console.error('Error updating income:', error)
     }
@@ -162,7 +165,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
       const expensesData = await expensesService.getProjectExpenses(projectId)
       setExpenses(expensesData)
       setShowAddExpense(false)
-      showSuccess('Gasto agregado exitosamente')
+      showSuccess(tp.expenseAdded)
     } catch (error) {
       console.error('Error updating expenses:', error)
     }
@@ -173,7 +176,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
       const logbookData = await logbookService.getProjectEntries(projectId)
       setLogbookEntries(logbookData)
       setShowAddLogbookEntry(false)
-      showSuccess('Entrada de bitacora agregada')
+      showSuccess(tp.logbookAdded)
     } catch (error) {
       console.error('Error updating logbook entries:', error)
     }
@@ -190,8 +193,8 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
   if (!project) {
     return (
       <div className="py-14 text-center">
-        <h2 className="text-xl font-semibold text-slate-900">Proyecto no encontrado</h2>
-        <p className="mt-2 text-slate-600">El proyecto no existe o no tienes acceso.</p>
+        <h2 className="text-xl font-semibold text-slate-900">{tp.notFound}</h2>
+        <p className="mt-2 text-slate-600">{tp.notFoundDesc}</p>
       </div>
     )
   }
@@ -223,7 +226,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
             className="mb-4 border border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
           >
             <ArrowLeft className="mr-1 h-4 w-4" />
-            Volver a proyectos
+            {tp.backToProjects}
           </Button>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -232,20 +235,20 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               {project.description && <p className="mt-2 text-sm text-slate-100 sm:text-base">{project.description}</p>}
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-100">
                 <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
-                  Codigo:
+                  {tp.code}
                   <span className="ml-1.5 rounded bg-white px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-900">
                     {project.invite_code}
                   </span>
                 </span>
                 <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
-                  Moneda: <span className="ml-1 font-semibold">{project?.currency || 'COP'}</span>
+                  {tp.currency} <span className="ml-1 font-semibold">{project?.currency || 'COP'}</span>
                 </span>
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${permissions.getRoleColor(
                     userRole
                   )}`}
                 >
-                  Tu rol: {permissions.getRoleDisplayName(userRole)}
+                  {tp.yourRole} {t.roles[userRole]}
                 </span>
               </div>
             </div>
@@ -253,15 +256,15 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/20 bg-white/10 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-white/70">Ingresos aprobados</p>
+              <p className="text-[11px] uppercase tracking-wide text-white/70">{tp.approvedIncome}</p>
               <p className="mt-1 text-lg font-bold text-white">{formatAmount(totalIncome)}</p>
             </div>
             <div className="rounded-2xl border border-white/20 bg-white/10 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-white/70">Gastos registrados</p>
+              <p className="text-[11px] uppercase tracking-wide text-white/70">{tp.recordedExpenses}</p>
               <p className="mt-1 text-lg font-bold text-white">{formatAmount(totalExpenses)}</p>
             </div>
             <div className="rounded-2xl border border-white/20 bg-white/10 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-white/70">Balance estimado</p>
+              <p className="text-[11px] uppercase tracking-wide text-white/70">{tp.estimatedBalance}</p>
               <p className="mt-1 text-lg font-bold text-white">{formatAmount(calculatedBalance)}</p>
             </div>
           </div>
@@ -271,51 +274,51 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
           <nav className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
             <button onClick={() => handleTabChange('overview')} className={tabButtonClass('overview')}>
               <BarChart3 className="h-4 w-4" />
-              Resumen
+              {tp.tabOverview}
             </button>
 
             {permissions.canEdit(userRole) && (
               <button onClick={() => handleTabChange('income')} className={tabButtonClass('income')}>
                 <TrendingUp className="h-4 w-4" />
-                Ingresos ({income.length})
+                {tp.tabIncome} ({income.length})
               </button>
             )}
 
             {permissions.canEdit(userRole) && (
               <button onClick={() => handleTabChange('expenses')} className={tabButtonClass('expenses')}>
                 <Receipt className="h-4 w-4" />
-                Gastos ({expenses.length})
+                {tp.tabExpenses} ({expenses.length})
               </button>
             )}
 
             {permissions.canEdit(userRole) && (
               <button onClick={() => handleTabChange('inventory')} className={tabButtonClass('inventory')}>
                 <Boxes className="h-4 w-4" />
-                Inventario
+                {tp.tabInventory}
               </button>
             )}
 
             <button onClick={() => handleTabChange('greenhouse')} className={tabButtonClass('greenhouse')}>
               <Leaf className="h-4 w-4" />
-              Invernadero
+              {tp.tabGreenhouse}
             </button>
 
             <button onClick={() => handleTabChange('logbook')} className={tabButtonClass('logbook')}>
               <BookOpen className="h-4 w-4" />
-              Bitacora ({logbookEntries.length})
+              {tp.tabLogbook} ({logbookEntries.length})
             </button>
 
             {permissions.canManageMembers(userRole) && (
               <button onClick={() => handleTabChange('members')} className={tabButtonClass('members')}>
                 <Users className="h-4 w-4" />
-                Miembros
+                {tp.tabMembers}
               </button>
             )}
 
             {permissions.canManageProject(userRole) && (
               <button onClick={() => handleTabChange('settings')} className={tabButtonClass('settings')}>
                 <Settings className="h-4 w-4" />
-                Configuracion
+                {tp.tabSettings}
               </button>
             )}
           </nav>
@@ -329,33 +332,33 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">Ingresos Totales</CardTitle>
+                    <CardTitle className="text-sm font-medium text-gray-600">{tp.totalIncome}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">{formatAmount(totalIncome)}</div>
-                    <p className="mt-1 text-xs text-gray-500">{income.length} ingresos</p>
+                    <p className="mt-1 text-xs text-gray-500">{income.length} {tp.nIncomes}</p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">Gastos Totales</CardTitle>
+                    <CardTitle className="text-sm font-medium text-gray-600">{tp.totalExpenses}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-red-600">{formatAmount(totalExpenses)}</div>
-                    <p className="mt-1 text-xs text-gray-500">{expenses.length} gastos</p>
+                    <p className="mt-1 text-xs text-gray-500">{expenses.length} {tp.nExpenses}</p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">Balance Final</CardTitle>
+                    <CardTitle className="text-sm font-medium text-gray-600">{tp.finalBalance}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className={`text-2xl font-bold ${calculatedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatAmount(calculatedBalance)}
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">{calculatedBalance >= 0 ? 'Disponible' : 'Deficit'}</p>
+                    <p className="mt-1 text-xs text-gray-500">{calculatedBalance >= 0 ? tp.available : tp.deficit}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -377,11 +380,11 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         {activeTab === 'income' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium">Gestion de ingresos</h2>
+              <h2 className="text-lg font-medium">{tp.incomeManagement}</h2>
               {permissions.canEdit(userRole) && (
                 <Button onClick={openIncomeModal}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Agregar ingreso
+                  {tp.addIncome}
                 </Button>
               )}
             </div>
@@ -393,11 +396,11 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         {activeTab === 'expenses' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium">Gestion de gastos</h2>
+              <h2 className="text-lg font-medium">{tp.expenseManagement}</h2>
               {permissions.canEdit(userRole) && (
                 <Button onClick={openExpenseModal}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Agregar gasto
+                  {tp.addExpense}
                 </Button>
               )}
             </div>
@@ -428,14 +431,14 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
             <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur-sm sm:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">Bitacora del proyecto</h2>
+                  <h2 className="text-xl font-bold text-slate-900">{tp.logbookTitle}</h2>
                   <p className="text-sm text-slate-600">
-                    Seguimiento visual de avances, novedades e imagenes de respaldo.
+                    {tp.logbookDesc}
                   </p>
                 </div>
                 <Button onClick={openLogbookModal}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Agregar bitacora
+                  {tp.addLogbook}
                 </Button>
               </div>
             </div>
@@ -461,57 +464,57 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  Configuracion del proyecto
+                  {tp.settingsTitle}
                 </CardTitle>
-                <CardDescription>Administra configuracion y acciones criticas del proyecto.</CardDescription>
+                <CardDescription>{tp.settingsDesc}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="mb-4 text-lg font-medium">Informacion general</h3>
+                  <h3 className="mb-4 text-lg font-medium">{tp.generalInfo}</h3>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700">Nombre del proyecto</label>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">{tp.projectName}</label>
                       <div className="rounded-md bg-gray-50 p-3">{project?.name}</div>
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700">Codigo de invitacion</label>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">{tp.inviteCode}</label>
                       <div className="rounded-md bg-gray-50 p-3 font-mono">{project?.invite_code}</div>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="mb-4 text-lg font-medium">Configuracion de moneda</h3>
+                  <h3 className="mb-4 text-lg font-medium">{tp.currencySettings}</h3>
                   <div className="space-y-4">
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700">Moneda actual</label>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">{tp.currentCurrency}</label>
                       <div className="flex items-center gap-4">
                         <div className="rounded-md bg-primary-50 p-3 font-semibold text-primary-700">
-                          {project?.currency === 'COP' ? 'Peso Colombiano (COP)' : 'Dolar Australiano (AUD)'}
+                          {project?.currency === 'COP' ? tp.copName : tp.audName}
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {
                             const newCurrency = project?.currency === 'COP' ? 'AUD' : 'COP'
-                            alert(`Funcion pendiente: cambiar a ${newCurrency}`)
+                            alert(`${tp.pendingFeature} ${newCurrency}`)
                           }}
                         >
-                          Cambiar a {project?.currency === 'COP' ? 'AUD' : 'COP'}
+                          {tp.changeTo} {project?.currency === 'COP' ? 'AUD' : 'COP'}
                         </Button>
                       </div>
                       <p className="mt-2 text-sm text-gray-500">
-                        Este cambio impacta la forma en que se muestran montos dentro del proyecto.
+                        {tp.currencyNote}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="mb-4 text-lg font-medium text-red-600">Zona de peligro</h3>
+                  <h3 className="mb-4 text-lg font-medium text-red-600">{tp.dangerZone}</h3>
                   <div className="rounded-lg border border-red-200 bg-red-50 p-4">
                     <p className="mb-4 text-sm text-red-700">
-                      Esta accion es irreversible y eliminara permanentemente los datos del proyecto.
+                      {tp.dangerNote}
                     </p>
                     <Button
                       variant="danger"
@@ -520,7 +523,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
                       loading={deletingProject}
                       disabled={deletingProject}
                     >
-                      {deletingProject ? 'Eliminando...' : 'Eliminar proyecto'}
+                      {deletingProject ? t.common.deleting : tp.deleteProject}
                     </Button>
                   </div>
                 </div>
@@ -546,7 +549,7 @@ export default function ProjectPageClient({ projectId, initialTab }: ProjectPage
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={confirmDeleteProject}
-        title="Eliminar proyecto"
+        title={tp.deleteProject}
         projectName={project?.name || ''}
         loading={deletingProject}
       />

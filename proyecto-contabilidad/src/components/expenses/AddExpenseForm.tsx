@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase'
 import { expenseSchema, type ExpenseFormData } from '@/lib/validations'
 import { categoriesService } from '@/lib/categories'
 import { CategoryManagerModal } from '@/components/categories/CategoryManagerModal'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface AddExpenseFormProps {
   projectId: string
@@ -30,6 +31,8 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
   const [currentUser, setCurrentUser] = useState<string | null>(null)
   const [categories, setCategories] = useState<string[]>([])
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
+  const { t } = useLanguage()
+  const tf = t.txForm
   // Success toast is handled by parent after closing the form
 
   useEffect(() => {
@@ -164,7 +167,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
       }
       onSuccess?.()
     } catch (err: any) {
-      setError(err.message || 'Error al agregar el gasto')
+      setError(err.message || tf.expenseError)
     } finally {
       setIsLoading(false)
       setUploadingFiles(false)
@@ -185,10 +188,10 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Receipt className="h-5 w-5" />
-          Agregar Gasto
+          {tf.expenseTitle}
         </CardTitle>
         <CardDescription>
-          Registra un nuevo gasto con documentos de respaldo
+          {tf.expenseSubtitle}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -203,14 +206,14 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
               <label htmlFor="category" className="text-sm font-medium text-center block">
-                Categoría *
+                {tf.category}
               </label>
               <select
                 id="category"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-center ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 {...register('category')}
               >
-                <option value="">Seleccionar categoría</option>
+                <option value="">{tf.selectCategory}</option>
                 {categories.map((category: string) => (
                   <option key={category} value={category}>
                     {category}
@@ -225,13 +228,13 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                 onClick={() => setShowCategoriesModal(true)}
                 className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
               >
-                Gestionar categorías
+                {tf.manageCategories}
               </button>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="amount" className="text-sm font-medium text-center block">
-                Monto *
+                {tf.amount}
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-3 text-sm text-muted-foreground">$</span>
@@ -250,7 +253,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                 />
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Formato automático (ej: 100.000)
+                {tf.amountFormat}
               </p>
               {errors.amount && (
                 <p className="text-sm text-destructive text-center">{errors.amount.message}</p>
@@ -259,7 +262,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
 
             <div className="space-y-2">
               <label htmlFor="expense_date" className="text-sm font-medium text-center block">
-                Fecha *
+                {tf.dateLabel}
               </label>
               <input
                 id="expense_date"
@@ -279,7 +282,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
 
             <div className="space-y-2">
               <label htmlFor="performed_by" className="text-sm font-medium text-center block">
-                Realizado por *
+                {tf.performedBy}
               </label>
               <Controller
                 name="performed_by"
@@ -291,14 +294,14 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                     value={(field.value && field.value !== '') ? field.value : (currentUser || '')}
                     onChange={field.onChange}
                   >
-                    <option value="">Seleccionar usuario</option>
+                    <option value="">{tf.selectUser}</option>
                     {currentUser && !members.some(m => m.user_id === currentUser) && (
-                      <option value={currentUser}>Tú</option>
+                      <option value={currentUser}>{t.common.you}</option>
                     )}
                     {members.map((member) => (
                       <option key={member.user_id} value={member.user_id}>
-                        {member.user?.full_name || member.user?.email || 'Sin nombre'}
-                        {member.user_id === currentUser && ' (Tú)'}
+                        {member.user?.full_name || member.user?.email || t.common.noName}
+                        {member.user_id === currentUser && ` (${t.common.you})`}
                       </option>
                     ))}
                   </select>
@@ -311,12 +314,12 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600 text-center block">
-                Registrado por
+                {tf.registeredBy}
               </label>
               <div className="flex h-10 w-full rounded-md border border-input bg-gray-50 px-3 py-2 text-sm text-gray-600 items-center justify-center">
                 {members.find(m => m.user_id === currentUser)?.user?.full_name || 
                  members.find(m => m.user_id === currentUser)?.user?.email || 
-                 'Usuario actual'}
+                 t.common.currentUser}
               </div>
             </div>
           </div>
@@ -326,13 +329,13 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
             {/* Descripción */}
             <div className="space-y-2">
               <label htmlFor="description" className="text-sm font-medium text-center block">
-                Descripción *
+                {tf.descriptionRequired}
               </label>
               <textarea
                 id="description"
                 placeholder={selectedCategory === 'Otros' 
-                  ? "Describe detalladamente el tipo de gasto..." 
-                  : "Describe el gasto realizado, proveedor, detalles del producto o servicio..."
+                  ? tf.expenseDescOtherPlaceholder
+                  : tf.expenseDescPlaceholder
                 }
                 className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-3 text-sm text-center ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 {...register('description')}
@@ -345,7 +348,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
             {/* Documentos de respaldo */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-center block">
-                Documentos de respaldo
+                {tf.supportDocs}
               </label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
               <div className="text-center">
@@ -353,7 +356,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                 <div className="mt-2">
                   <label htmlFor="files" className="cursor-pointer">
                     <span className="text-sm text-primary hover:underline">
-                      Seleccionar archivos
+                      {tf.selectFiles}
                     </span>
                     <input
                       id="files"
@@ -366,7 +369,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
                   </label>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Imágenes, videos, PDF, Word, Excel
+                  {tf.fileTypes}
                 </p>
               </div>
             </div>
@@ -374,7 +377,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
               {/* Selected Files */}
               {files.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Archivos seleccionados:</p>
+                  <p className="text-sm font-medium">{tf.selectedFiles}</p>
                   {files.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                       <div className="flex-1">
@@ -401,7 +404,7 @@ export function AddExpenseForm({ projectId, onSuccess }: AddExpenseFormProps) {
             className="w-full" 
             loading={isLoading || uploadingFiles}
           >
-            {uploadingFiles ? 'Subiendo archivos...' : 'Agregar Gasto'}
+            {uploadingFiles ? tf.uploadingFiles : tf.submitExpense}
           </Button>
         </form>
       </CardContent>

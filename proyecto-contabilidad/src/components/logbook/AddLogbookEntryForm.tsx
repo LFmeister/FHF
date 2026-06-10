@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { useToast } from '@/components/ui/Toast'
 import { logbookService } from '@/lib/logbook'
 import { ImagePlus, X, UploadCloud, CalendarDays, FileText } from 'lucide-react'
+import { useLanguage } from '@/context/LanguageContext'
 
 const logbookSchema = z.object({
   title: z.string().min(3, 'El titulo debe tener al menos 3 caracteres'),
@@ -28,6 +29,8 @@ export function AddLogbookEntryForm({ projectId, onSuccess }: AddLogbookEntryFor
   const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const { error: showError } = useToast()
+  const { t } = useLanguage()
+  const tl = t.logbook
 
   const {
     register,
@@ -47,7 +50,7 @@ export function AddLogbookEntryForm({ projectId, onSuccess }: AddLogbookEntryFor
 
     const validFiles = files.filter((file) => {
       const valid = file.type.startsWith('image/')
-      if (!valid) showError(`${file.name} no es una imagen valida`)
+      if (!valid) showError(`${file.name} ${tl.notValidImage}`)
       return valid
     })
 
@@ -88,7 +91,7 @@ export function AddLogbookEntryForm({ projectId, onSuccess }: AddLogbookEntryFor
       onSuccess()
     } catch (error) {
       console.error('Error creating logbook entry:', error)
-      showError('Error al crear la entrada de bitacora')
+      showError(tl.createError)
     } finally {
       setLoading(false)
     }
@@ -99,31 +102,31 @@ export function AddLogbookEntryForm({ projectId, onSuccess }: AddLogbookEntryFor
       <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-emerald-50 px-5 py-4 sm:px-6">
         <p className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
           <ImagePlus className="h-3.5 w-3.5" />
-          Nueva entrada
+          {tl.newEntry}
         </p>
-        <h3 className="mt-2 text-xl font-bold text-slate-900">Registrar avance en bitacora</h3>
-        <p className="mt-1 text-sm text-slate-600">Documenta hitos, observaciones y evidencias fotograficas.</p>
+        <h3 className="mt-2 text-xl font-bold text-slate-900">{tl.formTitle}</h3>
+        <p className="mt-1 text-sm text-slate-600">{tl.formDesc}</p>
       </div>
 
       <CardContent className="p-5 sm:p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Titulo *</label>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">{tl.titleLabel}</label>
               <div className="relative">
                 <FileText className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   {...register('title')}
                   className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100"
-                  placeholder="Ej: avance de instalacion, entrega parcial, visita tecnica"
+                  placeholder={tl.titlePlaceholder}
                 />
               </div>
               {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>}
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Fecha</label>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">{tl.dateLabel}</label>
               <div className="relative">
                 <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
@@ -136,18 +139,18 @@ export function AddLogbookEntryForm({ projectId, onSuccess }: AddLogbookEntryFor
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Descripcion</label>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">{tl.descLabel}</label>
             <textarea
               {...register('description')}
               rows={4}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100"
-              placeholder="Describe lo realizado, problemas encontrados, proximo paso, responsables..."
+              placeholder={tl.descPlaceholder}
             />
           </div>
 
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
             <div className="mb-2 flex items-center justify-between gap-3">
-              <label className="text-sm font-semibold text-slate-700">Imagenes de respaldo (opcional)</label>
+              <label className="text-sm font-semibold text-slate-700">{tl.imagesLabel}</label>
               <input id="logbook-images" type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
               <Button
                 type="button"
@@ -156,10 +159,10 @@ export function AddLogbookEntryForm({ projectId, onSuccess }: AddLogbookEntryFor
                 onClick={() => document.getElementById('logbook-images')?.click()}
               >
                 <UploadCloud className="mr-2 h-4 w-4" />
-                Cargar imagenes
+                {tl.uploadImages}
               </Button>
             </div>
-            <p className="text-xs text-slate-500">Formatos recomendados: JPG, PNG, WEBP.</p>
+            <p className="text-xs text-slate-500">{tl.formats}</p>
 
             {imagePreviews.length > 0 && (
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -185,7 +188,7 @@ export function AddLogbookEntryForm({ projectId, onSuccess }: AddLogbookEntryFor
 
           <div className="flex justify-end">
             <Button type="submit" loading={loading} disabled={loading} className="min-w-[180px]">
-              {loading ? 'Guardando...' : 'Guardar entrada'}
+              {loading ? tl.saving : tl.saveEntry}
             </Button>
           </div>
         </form>

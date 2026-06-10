@@ -10,6 +10,7 @@ import { incomeService, type Income } from '@/lib/income'
 import { formatCurrency } from '@/lib/currency'
 import { permissions, type UserRole } from '@/lib/permissions'
 import { useConfirm } from '@/hooks/useConfirm'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface IncomeListProps {
   income: Income[]
@@ -22,13 +23,15 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const confirmDialog = useConfirm()
   const { error: showError } = useToast()
+  const { t } = useLanguage()
+  const ti = t.income
 
   const handleDelete = async (incomeId: string) => {
     const confirmed = await confirmDialog.confirm({
-      title: 'Eliminar Ingreso',
-      message: '¿Estás seguro de que quieres eliminar este ingreso? Esta acción no se puede deshacer.',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
+      title: ti.deleteTitle,
+      message: ti.deleteMessage,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
       variant: 'danger'
     })
 
@@ -40,7 +43,7 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
       onUpdate?.()
     } catch (error) {
       console.error('Error deleting income:', error)
-      showError('Error al eliminar el ingreso')
+      showError(ti.deleteError)
     } finally {
       setDeletingId(null)
     }
@@ -52,10 +55,10 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
         <CardContent className="flex flex-col items-center justify-center py-12">
           <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-            No hay ingresos registrados
+            {ti.emptyTitle}
           </h3>
           <p className="text-sm text-muted-foreground text-center">
-            Agrega el primer ingreso para comenzar a llevar el control financiero del proyecto.
+            {ti.emptyDesc}
           </p>
         </CardContent>
       </Card>
@@ -72,7 +75,7 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
                 <CardTitle className="text-lg text-green-700 mb-1">
                   {formatCurrency(item.amount)}
                 </CardTitle>
-                <h4 className="font-semibold text-gray-900 break-words">{item.category || 'Sin categoría'}</h4>
+                <h4 className="font-semibold text-gray-900 break-words">{item.category || ti.noCategory}</h4>
                 {item.description && (
                   <p className="text-sm text-gray-600 mt-1 break-words">{item.description}</p>
                 )}
@@ -95,7 +98,7 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
           <CardContent className="pt-0">
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
               <span>
-                Fecha: {new Date(item.income_date).toLocaleDateString('es-CO')}
+                {ti.dateLabel} {new Date(item.income_date).toLocaleDateString(t.locale)}
               </span>
               {item.category && (
                 <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
@@ -103,21 +106,21 @@ export function IncomeList({ income, currentUserId, userRole = 'view', onUpdate 
                 </span>
               )}
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                {item.status === 'approved' ? 'Aprobado' : 
-                 item.status === 'pending' ? 'Pendiente' : 'Rechazado'}
+                {item.status === 'approved' ? ti.approved :
+                 item.status === 'pending' ? ti.pending : ti.rejected}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mt-2">
               <span>
-                <strong>Realizado por:</strong> {item.performed_user?.full_name || item.performed_user?.email || 'Usuario desconocido'}
+                <strong>{ti.performedBy}</strong> {item.performed_user?.full_name || item.performed_user?.email || t.common.unknownUser}
               </span>
               <span>
-                <strong>Registrado por:</strong> {item.user?.full_name || item.user?.email || 'Usuario desconocido'}
+                <strong>{ti.registeredBy}</strong> {item.user?.full_name || item.user?.email || t.common.unknownUser}
               </span>
             </div>
             <div className="text-xs text-gray-400 mt-2">
-              Registrado: {new Date(item.created_at).toLocaleDateString('es-CO')} a las{' '}
-              {new Date(item.created_at).toLocaleTimeString('es-CO', { 
+              {ti.registered} {new Date(item.created_at).toLocaleDateString(t.locale)} {ti.atTime}{' '}
+              {new Date(item.created_at).toLocaleTimeString(t.locale, {
                 hour: '2-digit', 
                 minute: '2-digit' 
               })}

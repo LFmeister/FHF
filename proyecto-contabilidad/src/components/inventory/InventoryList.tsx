@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/currency'
 import { ImageModal } from './ImageModal'
 import { EditItemModal } from './EditItemModal'
 import { useConfirm } from '@/hooks/useConfirm'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface InventoryItemWithQty extends InventoryItem {
   files?: InventoryFile[]
@@ -48,6 +49,8 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
   const [editingItem, setEditingItem] = useState<InventoryItemWithQty | null>(null)
   const confirmDialog = useConfirm()
   const { toasts, removeToast, error: showError } = useToast()
+  const { t } = useLanguage()
+  const ti = t.inventory
 
   const totalByState = useMemo(() => {
     return items.reduce(
@@ -97,7 +100,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
       setTempUnitValue('')
       onUpdate?.()
     } catch (err: any) {
-      showError(err.message || 'Error al actualizar el valor unitario')
+      showError(err.message || ti.updateValueError)
     }
   }
 
@@ -128,10 +131,10 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
 
   const handleDelete = async (itemId: string) => {
     const confirmed = await confirmDialog.confirm({
-      title: 'Eliminar Producto',
-      message: '¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
+      title: ti.deleteTitle,
+      message: ti.deleteMessage,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
       variant: 'danger'
     })
 
@@ -142,7 +145,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
       await inventoryService.deleteItem(itemId)
       onUpdate?.()
     } catch (e: any) {
-      showError(e.message || 'Error al eliminar el producto')
+      showError(e.message || ti.deleteError)
     } finally {
       setDeletingId(null)
     }
@@ -195,7 +198,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
     const qtyStr = kind === 'add' ? input.add : kind === 'toUse' ? input.toUse : input.toSpent
     const qty = parseInt(qtyStr, 10)
     if (!qty || qty <= 0) {
-      showError('Ingresa una cantidad válida')
+      showError(ti.invalidQty)
       return
     }
 
@@ -208,7 +211,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
         })
       } else if (kind === 'toUse') {
         if (qty > item.qty_bodega) {
-          showError('Cantidad supera lo disponible en bodega')
+          showError(ti.qtyExceedsStorage)
           return
         }
         await inventoryService.createMovement(item.id, projectId, {
@@ -218,7 +221,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
         })
       } else {
         if (qty > item.qty_uso) {
-          showError('Cantidad supera lo disponible en uso')
+          showError(ti.qtyExceedsUse)
           return
         }
         await inventoryService.createMovement(item.id, projectId, {
@@ -230,7 +233,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
       onUpdate?.()
       setQtyInputs(prev => ({ ...prev, [item.id]: { add: '', toUse: '', toSpent: '' } }))
     } catch (err: any) {
-      showError(err.message || 'Error al registrar movimiento')
+      showError(err.message || ti.movementError)
     }
   }
 
@@ -240,8 +243,8 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
         <CardContent className="py-12">
           <div className="flex flex-col items-center justify-center text-gray-500">
             <Upload className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="text-lg font-medium">No hay productos en inventario</p>
-            <p className="text-sm mt-1">Comienza agregando productos al inventario</p>
+            <p className="text-lg font-medium">{ti.emptyTitle}</p>
+            <p className="text-sm mt-1">{ti.emptyDesc}</p>
           </div>
         </CardContent>
       </Card>
@@ -252,21 +255,21 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Resumen del Inventario</CardTitle>
-          <CardDescription>Tabla por producto y cantidades por estado</CardDescription>
+          <CardTitle>{ti.summaryTitle}</CardTitle>
+          <CardDescription>{ti.summaryDesc}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto -mx-4 sm:mx-0">
             <table className="min-w-full text-xs sm:text-sm border">
               <thead>
                 <tr className="bg-gray-50 text-gray-700">
-                  <th className="text-center p-2 border">Producto</th>
-                  <th className="text-center p-2 border">Valor unitario</th>
-                  <th className="text-center p-2 border">En bodega</th>
-                  <th className="text-center p-2 border">En uso</th>
-                  <th className="text-center p-2 border">Gastado</th>
-                  <th className="text-center p-2 border">Total</th>
-                  <th className="text-center p-2 border">Valor total (stock)</th>
+                  <th className="text-center p-2 border">{ti.colProduct}</th>
+                  <th className="text-center p-2 border">{ti.colUnitValue}</th>
+                  <th className="text-center p-2 border">{ti.colInStorage}</th>
+                  <th className="text-center p-2 border">{ti.colInUse}</th>
+                  <th className="text-center p-2 border">{ti.colSpent}</th>
+                  <th className="text-center p-2 border">{ti.colTotal}</th>
+                  <th className="text-center p-2 border">{ti.colTotalValue}</th>
                 </tr>
               </thead>
               <tbody>
@@ -298,14 +301,14 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                             <button
                               onClick={() => saveUnitValue(item.id)}
                               className="text-xs text-green-600 hover:text-green-800"
-                              title="Guardar"
+                              title={t.common.save}
                             >
                               ✓
                             </button>
                             <button
                               onClick={cancelEditingUnitValue}
                               className="text-xs text-red-600 hover:text-red-800"
-                              title="Cancelar"
+                              title={t.common.cancel}
                             >
                               ✕
                             </button>
@@ -314,9 +317,9 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                           <button
                             onClick={() => startEditingUnitValue(item.id, item.unit_value)}
                             className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                            title="Click para editar valor unitario"
+                            title={ti.clickToEdit}
                           >
-                            {item.unit_value != null ? formatCurrency(item.unit_value) : 'Agregar valor'}
+                            {item.unit_value != null ? formatCurrency(item.unit_value) : ti.addValue}
                           </button>
                         )}
                       </td>
@@ -330,13 +333,13 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                 })}
                 {items.length === 0 && (
                   <tr>
-                    <td className="p-2 border text-center text-gray-500" colSpan={7}>Sin datos</td>
+                    <td className="p-2 border text-center text-gray-500" colSpan={7}>{t.common.noData}</td>
                   </tr>
                 )}
               </tbody>
               <tfoot>
                 <tr className="bg-gray-100 font-semibold">
-                  <td className="p-2 border text-center">Totales</td>
+                  <td className="p-2 border text-center">{t.common.totals}</td>
                   <td className="p-2 border text-center">-</td>
                   <td className="p-2 border text-center">{totalByState.bodega}</td>
                   <td className="p-2 border text-center">{totalByState.uso}</td>
@@ -361,7 +364,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                     getThumbUrl(item) ? 'cursor-pointer hover:border-gray-300' : ''
                   }`}
                   onClick={() => getThumbUrl(item) && openImageModal(item)}
-                  title={getThumbUrl(item) ? "Click para ver imagen completa" : "Sin imagen"}
+                  title={getThumbUrl(item) ? ti.clickFullImage : ti.noImage}
                 >
                   {getThumbUrl(item) ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -374,12 +377,12 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                   {/* Botones de acción - Fijos en la parte superior derecha */}
                   <div className="flex flex-wrap items-start justify-end gap-1 sm:gap-2 mb-2 sm:mb-0 sm:absolute sm:top-0 sm:right-0">
                     <Button variant="ghost" size="sm" onClick={() => setMovementsOpen(prev => ({ ...prev, [item.id]: !prev[item.id] }))}>
-                      <span className="hidden sm:inline">{movementsOpen[item.id] ? 'Ocultar movimientos' : 'Movimientos'}</span>
-                      <span className="sm:hidden text-xs">{movementsOpen[item.id] ? 'Ocultar' : 'Movimientos'}</span>
+                      <span className="hidden sm:inline">{movementsOpen[item.id] ? ti.hideMovements : ti.movements}</span>
+                      <span className="sm:hidden text-xs">{movementsOpen[item.id] ? t.common.hide : ti.movements}</span>
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => triggerReplaceImage(item.id)} disabled={uploadingFor === item.id}>
                       <Upload className="h-4 w-4 sm:mr-1" /> 
-                      <span className="hidden sm:inline">{uploadingFor === item.id ? 'Subiendo...' : 'Reemplazar imagen'}</span>
+                      <span className="hidden sm:inline">{uploadingFor === item.id ? t.common.uploading : ti.replaceImage}</span>
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => setExpanded(prev => ({ ...prev, [item.id]: !prev[item.id] }))}>
                       <ChevronDown className={`h-4 w-4 transition-transform ${expanded[item.id] ? 'rotate-180' : ''}`} />
@@ -389,7 +392,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                       size="sm"
                       className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                       onClick={() => setEditingItem(item)}
-                      title="Editar producto"
+                      title={ti.editProduct}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -399,7 +402,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                       className="text-red-600 hover:text-red-800 hover:bg-red-50"
                       onClick={() => handleDelete(item.id)}
                       disabled={deletingId === item.id}
-                      title="Eliminar producto"
+                      title={ti.deleteProduct}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -414,7 +417,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                     <div className="mt-1">
                       {editingUnitValue === item.id ? (
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-600">Valor unitario:</span>
+                          <span className="text-sm font-medium text-gray-600">{ti.unitValueLabel}</span>
                           <div className="relative flex-1 max-w-[200px]">
                             <span className="absolute left-2 top-1 text-xs text-muted-foreground">$</span>
                             <input
@@ -433,35 +436,35 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                           <button
                             onClick={() => saveUnitValue(item.id)}
                             className="text-sm text-green-600 hover:text-green-800"
-                            title="Guardar"
+                            title={t.common.save}
                           >
                             ✓
                           </button>
                           <button
                             onClick={cancelEditingUnitValue}
                             className="text-sm text-red-600 hover:text-red-800"
-                            title="Cancelar"
+                            title={t.common.cancel}
                           >
                             ✕
                           </button>
                         </div>
                       ) : (
                         <p className="text-sm text-gray-600">
-                          <strong>Valor unitario:</strong>{' '}
+                          <strong>{ti.unitValueLabel}</strong>{' '}
                           <button
                             onClick={() => startEditingUnitValue(item.id, item.unit_value)}
                             className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                            title="Click para editar valor unitario"
+                            title={ti.clickToEdit}
                           >
-                            {item.unit_value != null ? formatCurrency(item.unit_value) : 'Agregar valor'}
+                            {item.unit_value != null ? formatCurrency(item.unit_value) : ti.addValue}
                           </button>
                         </p>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-2">
-                      <span><strong>Bodega:</strong> {item.qty_bodega}</span>
-                      <span><strong>En uso:</strong> {item.qty_uso}</span>
-                      <span><strong>Gastado:</strong> {item.qty_gastado}</span>
+                      <span><strong>{ti.storage}</strong> {item.qty_bodega}</span>
+                      <span><strong>{ti.inUse}</strong> {item.qty_uso}</span>
+                      <span><strong>{ti.spent}</strong> {item.qty_gastado}</span>
                     </div>
                   </div>
 
@@ -469,24 +472,24 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                   {movementsOpen[item.id] && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
                       <div className="p-3 rounded-lg border bg-gray-50">
-                        <p className="text-xs font-medium text-gray-600 mb-2">Ingresar a bodega</p>
+                        <p className="text-xs font-medium text-gray-600 mb-2">{ti.addToStorage}</p>
                         <div className="flex gap-2">
-                          <Input type="number" min={1} placeholder="Cantidad" value={(qtyInputs[item.id]?.add) || ''} onChange={e => updateQtyInput(item.id, 'add', e.target.value)} />
-                          <Button size="sm" onClick={() => move(item, 'add')}>Ingresar</Button>
+                          <Input type="number" min={1} placeholder={ti.quantity} value={(qtyInputs[item.id]?.add) || ''} onChange={e => updateQtyInput(item.id, 'add', e.target.value)} />
+                          <Button size="sm" onClick={() => move(item, 'add')}>{ti.addBtn}</Button>
                         </div>
                       </div>
                       <div className="p-3 rounded-lg border bg-gray-50">
-                        <p className="text-xs font-medium text-gray-600 mb-2">Mover a En uso</p>
+                        <p className="text-xs font-medium text-gray-600 mb-2">{ti.moveToUse}</p>
                         <div className="flex gap-2">
                           <Input type="number" min={1} max={item.qty_bodega} placeholder={`Max ${item.qty_bodega}`} value={(qtyInputs[item.id]?.toUse) || ''} onChange={e => updateQtyInput(item.id, 'toUse', e.target.value)} />
-                          <Button size="sm" onClick={() => move(item, 'toUse')}>Mover</Button>
+                          <Button size="sm" onClick={() => move(item, 'toUse')}>{ti.moveBtn}</Button>
                         </div>
                       </div>
                       <div className="p-3 rounded-lg border bg-gray-50">
-                        <p className="text-xs font-medium text-gray-600 mb-2">Marcar Gastado</p>
+                        <p className="text-xs font-medium text-gray-600 mb-2">{ti.markSpent}</p>
                         <div className="flex gap-2">
                           <Input type="number" min={1} max={item.qty_uso} placeholder={`Max ${item.qty_uso}`} value={(qtyInputs[item.id]?.toSpent) || ''} onChange={e => updateQtyInput(item.id, 'toSpent', e.target.value)} />
-                          <Button size="sm" onClick={() => move(item, 'toSpent')}>Gastar</Button>
+                          <Button size="sm" onClick={() => move(item, 'toSpent')}>{ti.spendBtn}</Button>
                         </div>
                       </div>
                     </div>
@@ -509,7 +512,7 @@ export function InventoryList({ projectId, items, onUpdate }: InventoryListProps
                         </div>
                       ))}
                       {(!item.files || item.files.length === 0) && (
-                        <div className="col-span-full text-xs text-gray-500">Sin archivos</div>
+                        <div className="col-span-full text-xs text-gray-500">{ti.noFiles}</div>
                       )}
                     </div>
                   )}

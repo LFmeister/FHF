@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { permissions, type UserRole } from '@/lib/permissions'
 import { useConfirm } from '@/hooks/useConfirm'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface LogbookListProps {
   entries: LogbookEntry[]
@@ -38,6 +39,8 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
   const [expandedEntries, setExpandedEntries] = useState<Record<string, boolean>>({})
   const { success, error: showError } = useToast()
   const confirmDialog = useConfirm()
+  const { t } = useLanguage()
+  const tl = t.logbook
 
   const canDelete = (entry: LogbookEntry) => {
     return entry.user_id === currentUserId || permissions.canManageProject(userRole)
@@ -72,7 +75,7 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
 
     return Array.from(groups.entries()).map(([key, data]) => ({
       key,
-      label: formatGroupDate(key),
+      label: formatGroupDate(key, t.locale, tl.today, tl.yesterday),
       data,
     }))
   }, [filteredEntries])
@@ -84,10 +87,10 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
 
   const handleDelete = async (entryId: string) => {
     const confirmed = await confirmDialog.confirm({
-      title: 'Eliminar entrada',
-      message: 'Esta accion es permanente. Deseas continuar?',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
+      title: tl.deleteTitle,
+      message: tl.deleteMessage,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
       variant: 'danger',
     })
 
@@ -96,11 +99,11 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
     setDeletingId(entryId)
     try {
       await logbookService.deleteEntry(entryId)
-      success('Entrada eliminada correctamente')
+      success(tl.deleted)
       onUpdate()
     } catch (err) {
       console.error('Error deleting entry:', err)
-      showError('No fue posible eliminar la entrada')
+      showError(tl.deleteError)
     } finally {
       setDeletingId(null)
     }
@@ -116,8 +119,8 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
         <CardContent className="py-14">
           <div className="flex flex-col items-center justify-center text-slate-500">
             <GalleryHorizontal className="mb-3 h-12 w-12 opacity-50" />
-            <p className="text-lg font-semibold text-slate-800">Bitacora vacia</p>
-            <p className="mt-1 text-sm">Comienza a documentar avances del proyecto.</p>
+            <p className="text-lg font-semibold text-slate-800">{tl.emptyTitle}</p>
+            <p className="mt-1 text-sm">{tl.emptyDesc}</p>
           </div>
         </CardContent>
       </Card>
@@ -130,7 +133,7 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Buscar en bitacora</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{tl.searchLabel}</label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
@@ -138,13 +141,13 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
                   className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100"
-                  placeholder="Titulo, descripcion o responsable"
+                  placeholder={tl.searchPlaceholder}
                 />
               </div>
             </div>
 
             <div className="md:w-56">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Filtro</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{tl.filterLabel}</label>
               <div className="relative">
                 <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <select
@@ -152,9 +155,9 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
                   onChange={(e) => setEntryFilter(e.target.value as EntryFilter)}
                   className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100"
                 >
-                  <option value="all">Todos los registros</option>
-                  <option value="mine">Solo mis entradas</option>
-                  <option value="with-images">Con imagenes</option>
+                  <option value="all">{tl.filterAll}</option>
+                  <option value="mine">{tl.filterMine}</option>
+                  <option value="with-images">{tl.filterWithImages}</option>
                 </select>
               </div>
             </div>
@@ -162,17 +165,17 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Entradas</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">{tl.statEntries}</p>
               <p className="mt-1 text-xl font-bold text-slate-900">{filteredEntries.length}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Con imagenes</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">{tl.statWithImages}</p>
               <p className="mt-1 text-xl font-bold text-slate-900">
                 {filteredEntries.filter((entry) => (entry.images?.length || 0) > 0).length}
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Imagenes</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">{tl.statImages}</p>
               <p className="mt-1 text-xl font-bold text-slate-900">{totalImages}</p>
             </div>
           </div>
@@ -182,8 +185,8 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
       {groupedEntries.length === 0 ? (
         <Card className="rounded-2xl border border-slate-200 bg-white">
           <CardContent className="py-14 text-center">
-            <p className="text-lg font-semibold text-slate-800">Sin resultados</p>
-            <p className="mt-1 text-sm text-slate-600">Ajusta el filtro o la busqueda.</p>
+            <p className="text-lg font-semibold text-slate-800">{tl.noResults}</p>
+            <p className="mt-1 text-sm text-slate-600">{tl.noResultsDesc}</p>
           </CardContent>
         </Card>
       ) : (
@@ -194,7 +197,7 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">{group.label}</h3>
                 <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
                   <Rows className="h-3.5 w-3.5" />
-                  {group.data.length} entradas
+                  {group.data.length} {tl.nEntries}
                 </span>
               </div>
 
@@ -214,7 +217,7 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
                             onClick={() => handleDelete(entry.id)}
                             disabled={deletingId === entry.id}
                             className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                            title="Eliminar entrada"
+                            title={tl.deleteEntry}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -224,11 +227,11 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
                       <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
                           <Calendar className="h-3.5 w-3.5" />
-                          {formatDate(entry.entry_date)}
+                          {formatDate(entry.entry_date, t.locale)}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
                           <User className="h-3.5 w-3.5" />
-                          {entry.user_name || 'Usuario'}
+                          {entry.user_name || t.common.user}
                         </span>
                       </div>
 
@@ -241,18 +244,18 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
                           <div className="mb-2 flex items-center justify-between">
                             <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
                               <ImageIcon className="h-3.5 w-3.5" />
-                              {entry.images!.length} imagen(es)
+                              {entry.images!.length} {tl.nImages}
                             </span>
                             <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => toggleExpand(entry.id)}>
                               {isExpanded ? (
                                 <>
                                   <ChevronUp className="mr-1 h-3.5 w-3.5" />
-                                  Ocultar
+                                  {t.common.hide}
                                 </>
                               ) : (
                                 <>
                                   <ChevronDown className="mr-1 h-3.5 w-3.5" />
-                                  Ver
+                                  {t.common.view}
                                 </>
                               )}
                             </Button>
@@ -269,7 +272,7 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
                                 >
                                   <img
                                     src={image.image_url}
-                                    alt={image.caption || 'Imagen de bitacora'}
+                                    alt={image.caption || tl.logbookImage}
                                     className="h-20 w-full object-cover transition-transform group-hover:scale-105"
                                   />
                                 </button>
@@ -293,7 +296,7 @@ export function LogbookList({ entries, currentUserId, userRole, onUpdate }: Logb
           onClick={() => setSelectedImage(null)}
         >
           <div className="relative max-h-full max-w-5xl">
-            <img src={selectedImage} alt="Imagen ampliada" className="max-h-[90vh] max-w-full rounded-xl object-contain" />
+            <img src={selectedImage} alt={tl.enlargedImage} className="max-h-[90vh] max-w-full rounded-xl object-contain" />
             <button
               onClick={() => setSelectedImage(null)}
               className="absolute right-2 top-2 rounded-full bg-white p-2 text-slate-900 transition hover:bg-slate-100"
@@ -328,17 +331,17 @@ function toDateKey(value: string) {
   return `${year}-${month}-${day}`
 }
 
-function formatGroupDate(dateKey: string) {
+function formatGroupDate(dateKey: string, locale: string, todayLabel: string, yesterdayLabel: string) {
   const date = new Date(`${dateKey}T00:00:00`)
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const yesterday = new Date(today)
   yesterday.setDate(today.getDate() - 1)
 
-  if (date.getTime() === today.getTime()) return 'Hoy'
-  if (date.getTime() === yesterday.getTime()) return 'Ayer'
+  if (date.getTime() === today.getTime()) return todayLabel
+  if (date.getTime() === yesterday.getTime()) return yesterdayLabel
 
-  return date.toLocaleDateString('es-ES', {
+  return date.toLocaleDateString(locale, {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
@@ -346,9 +349,9 @@ function formatGroupDate(dateKey: string) {
   })
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, locale: string) {
   const date = new Date(value)
-  return date.toLocaleDateString('es-ES', {
+  return date.toLocaleDateString(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

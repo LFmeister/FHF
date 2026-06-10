@@ -7,6 +7,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useToast } from '@/components/ui/Toast'
 import { inventoryService } from '@/lib/inventory'
 import { useConfirm } from '@/hooks/useConfirm'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface ImageModalProps {
   isOpen: boolean
@@ -22,6 +23,8 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
   const [isDeleting, setIsDeleting] = useState(false)
   const confirmDialog = useConfirm()
   const { error: showError } = useToast()
+  const { t } = useLanguage()
+  const ti = t.inventory
 
   if (!isOpen) return null
 
@@ -40,7 +43,7 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
         onClose()
       } catch (error) {
         console.error('Error al reemplazar imagen:', error)
-        showError('Error al reemplazar la imagen')
+        showError(ti.imgReplaceError)
       } finally {
         setIsUploading(false)
       }
@@ -50,10 +53,10 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
 
   const handleDeleteImage = async () => {
     const confirmed = await confirmDialog.confirm({
-      title: 'Eliminar Imagen',
-      message: '¿Estás seguro de que quieres eliminar esta imagen? Esta acción no se puede deshacer.',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
+      title: ti.imgDeleteTitle,
+      message: ti.imgDeleteMessage,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
       variant: 'danger'
     })
 
@@ -66,7 +69,7 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
       onClose()
     } catch (error) {
       console.error('Error al eliminar imagen:', error)
-      showError('Error al eliminar la imagen')
+      showError(ti.imgDeleteError)
     } finally {
       setIsDeleting(false)
     }
@@ -101,7 +104,7 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
             className="flex items-center gap-2"
           >
             <Upload className="h-4 w-4" />
-            {isUploading ? 'Subiendo...' : 'Reemplazar Imagen'}
+            {isUploading ? t.common.uploading : ti.replaceImageBtn}
           </Button>
           
           <Button
@@ -111,7 +114,7 @@ export function ImageModal({ isOpen, onClose, imageUrl, itemName, itemId, onImag
             className="flex items-center gap-2"
           >
             <Trash2 className="h-4 w-4" />
-            {isDeleting ? 'Eliminando...' : 'Eliminar Imagen'}
+            {isDeleting ? t.common.deleting : ti.deleteImageBtn}
           </Button>
         </div>
       </div>

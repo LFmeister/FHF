@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { projectsService } from '@/lib/projects'
 import { joinProjectSchema, type JoinProjectFormData } from '@/lib/validations'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface JoinProjectFormProps {
   onSuccess?: () => void
@@ -19,6 +20,8 @@ export function JoinProjectForm({ onSuccess }: JoinProjectFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { t } = useLanguage()
+  const tj = t.joinProject
 
   const {
     register,
@@ -39,7 +42,7 @@ export function JoinProjectForm({ onSuccess }: JoinProjectFormProps) {
       onSuccess?.()
       router.push(`/dashboard/project?id=${project.id}`)
     } catch (err: any) {
-      setError(err.message || 'Error al unirse al proyecto')
+      setError(err.message || tj.error)
     } finally {
       setIsLoading(false)
     }
@@ -50,10 +53,10 @@ export function JoinProjectForm({ onSuccess }: JoinProjectFormProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UserPlus className="h-5 w-5" />
-          Unirse a Proyecto
+          {tj.title}
         </CardTitle>
         <CardDescription>
-          Ingresa el código de invitación para unirte a un proyecto existente
+          {tj.subtitle}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -66,7 +69,7 @@ export function JoinProjectForm({ onSuccess }: JoinProjectFormProps) {
 
           <div className="space-y-2">
             <label htmlFor="inviteCode" className="text-sm font-medium">
-              Código de Invitación
+              {tj.codeLabel}
             </label>
             <Input
               id="inviteCode"
@@ -80,12 +83,12 @@ export function JoinProjectForm({ onSuccess }: JoinProjectFormProps) {
               }}
             />
             <p className="text-xs text-muted-foreground">
-              El código debe tener 8 caracteres (letras y números)
+              {tj.codeHint}
             </p>
           </div>
 
           <Button type="submit" className="w-full" loading={isLoading}>
-            Unirse al Proyecto
+            {tj.submit}
           </Button>
         </form>
       </CardContent>

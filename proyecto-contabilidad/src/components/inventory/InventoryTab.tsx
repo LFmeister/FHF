@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/Toast'
 import { InventoryChart } from '@/components/charts/InventoryChart'
 import { permissions, type UserRole } from '@/lib/permissions'
 import { PopupModal } from '@/components/ui/PopupModal'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface InventoryTabProps {
   projectId: string
@@ -20,6 +21,8 @@ interface InventoryTabProps {
 
 export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
   const { success: showSuccess } = useToast()
+  const { t } = useLanguage()
+  const ti = t.inventory
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [items, setItems] = useState<any[]>([])
@@ -82,14 +85,14 @@ export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-lg font-medium flex items-center gap-2">
-          <Boxes className="h-5 w-5" /> Inventario
+          <Boxes className="h-5 w-5" /> {ti.title}
         </h2>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 sm:flex-1 sm:justify-end">
           {/* Buscador */}
           <div ref={searchRef} className="relative w-full sm:max-w-xs">
             <Input
-              placeholder="Buscar producto..."
+              placeholder={ti.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setShowSuggestions(true) }}
               onFocus={() => setShowSuggestions(true)}
@@ -113,7 +116,7 @@ export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
           <div className="flex items-center gap-2 sm:gap-3">
             {searchQuery && (
               <Button variant="ghost" size="sm" onClick={() => { setSearchQuery(''); setShowSuggestions(false) }}>
-                Limpiar
+                {t.common.clear}
               </Button>
             )}
             
@@ -122,10 +125,10 @@ export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
               className="whitespace-nowrap"
               disabled={!permissions.canEdit(userRole)}
               variant={permissions.canEdit(userRole) ? 'primary' : 'outline'}
-              title={permissions.canEdit(userRole) ? 'Agregar producto' : 'No tienes permisos para agregar productos'}
+              title={permissions.canEdit(userRole) ? ti.addProduct : ti.noPermissionAdd}
             >
               <Plus className="h-4 w-4 mr-2" />
-              <span>Agregar producto</span>
+              <span>{ti.addProduct}</span>
             </Button>
           </div>
         </div>
@@ -137,7 +140,7 @@ export function InventoryTab({ projectId, userRole }: InventoryTabProps) {
           onSuccess={() => {
             setShowAdd(false)
             load()
-            showSuccess('Producto agregado exitosamente')
+            showSuccess(ti.addProductSuccess)
           }}
         />
       </PopupModal>

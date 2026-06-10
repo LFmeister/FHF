@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 // import { useToast } from '@/components/ui/Toast'
 import { inventoryService } from '@/lib/inventory'
+import { useLanguage } from '@/context/LanguageContext'
 
 const schema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -52,6 +53,9 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [displayUnitValue, setDisplayUnitValue] = useState('')
   const [displayPackageValue, setDisplayPackageValue] = useState('')
+  const { t } = useLanguage()
+  const ti = t.inventory
+  const tf = t.txForm
   // Success toast is handled by parent after closing the form
 
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<FormData>({
@@ -110,10 +114,10 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
       let unitValueToSave: number | null | undefined = data.unit_value
       if (data.use_package) {
         if (!data.initial_quantity || data.initial_quantity <= 0) {
-          throw new Error('Para calcular valor unitario desde paquete, ingresa "Ingresar Cantidad inicial" mayor a 0.')
+          throw new Error(ti.pkgNeedQty)
         }
         if (!data.package_value || data.package_value <= 0) {
-          throw new Error('Ingresa un "Valor del paquete" mayor a 0 o desactiva el modo paquete.')
+          throw new Error(ti.pkgNeedValue)
         }
         unitValueToSave = data.package_value / data.initial_quantity
       }
@@ -134,7 +138,7 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
           quantity: data.initial_quantity,
           from_state: 'externo',
           to_state: 'bodega',
-          note: 'Ingreso inicial al inventario'
+          note: ti.initialMoveNote
         })
       }
       reset()
@@ -143,7 +147,7 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
       setDisplayPackageValue('')
       onSuccess?.()
     } catch (err: any) {
-      setError(err.message || 'Error al crear el producto')
+      setError(err.message || ti.createError)
     } finally {
       setIsLoading(false)
     }
@@ -154,10 +158,10 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <PackagePlus className="h-5 w-5" />
-          Agregar Producto
+          {ti.addTitle}
         </CardTitle>
         <CardDescription>
-          Crea un nuevo producto en el inventario
+          {ti.addSubtitle}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -171,14 +175,14 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
           {/* Nombre, Valor (unitario o por paquete), Cantidad a Bodega e Imagen en una fila */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium text-center block">Nombre *</label>
+              <label htmlFor="name" className="text-sm font-medium text-center block">{ti.name}</label>
               <Input id="name" {...register('name')} error={errors.name?.message} className="text-center" />
             </div>
 
             <div className="space-y-2">
               {!usePackage ? (
                 <>
-                  <label htmlFor="unit_value" className="text-sm font-medium text-center block">Valor Unitario (Opcional)</label>
+                  <label htmlFor="unit_value" className="text-sm font-medium text-center block">{ti.unitValue}</label>
                   <div className="relative">
                     <span className="absolute left-3 top-3 text-sm text-muted-foreground">$</span>
                     <input
@@ -196,7 +200,7 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground text-center">
-                    Formato automático (ej: 100.000)
+                    {tf.amountFormat}
                   </p>
                   {errors.unit_value && (
                     <p className="text-sm text-destructive text-center">{errors.unit_value.message}</p>
@@ -204,7 +208,7 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
                 </>
               ) : (
                 <>
-                  <label htmlFor="package_value" className="text-sm font-medium text-center block">Valor del paquete</label>
+                  <label htmlFor="package_value" className="text-sm font-medium text-center block">{ti.packageValue}</label>
                   <div className="relative">
                     <span className="absolute left-3 top-3 text-sm text-muted-foreground">$</span>
                     <input
@@ -222,13 +226,13 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground text-center">
-                    Formato automático (ej: 100.000)
+                    {tf.amountFormat}
                   </p>
                   {errors.package_value && (
                     <p className="text-sm text-destructive text-center">{errors.package_value.message}</p>
                   )}
                   {computedUnit !== undefined && (
-                    <p className="text-xs text-center text-gray-500">Se guardará unitario: ${new Intl.NumberFormat('es-CO').format(computedUnit)}</p>
+                    <p className="text-xs text-center text-gray-500">{ti.willSaveUnit} ${new Intl.NumberFormat(t.locale).format(computedUnit)}</p>
                   )}
                 </>
               )}
@@ -264,12 +268,12 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
                     }
                   }}
                 />
-                <label htmlFor="use_package" className="text-xs text-gray-600">Usar valor por paquete</label>
+                <label htmlFor="use_package" className="text-xs text-gray-600">{ti.usePackage}</label>
               </div>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="initial_quantity" className="text-sm font-medium text-center block">Ingresar Cantidad inicial (Opcional)</label>
+              <label htmlFor="initial_quantity" className="text-sm font-medium text-center block">{ti.initialQty}</label>
               <Input 
                 id="initial_quantity" 
                 type="number" 
@@ -279,7 +283,7 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
                 {...register('initial_quantity')}
               />
               <p className="text-xs text-muted-foreground text-center">
-                Esta cantidad se ingresará automáticamente a bodega
+                {ti.initialQtyHint}
               </p>
               {errors.initial_quantity && (
                 <p className="text-sm text-destructive text-center">{errors.initial_quantity.message}</p>
@@ -287,7 +291,7 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="image" className="text-sm font-medium text-center block">Imagen (Opcional)</label>
+              <label htmlFor="image" className="text-sm font-medium text-center block">{ti.image}</label>
               <div className="relative">
                 <input
                   id="image"
@@ -303,7 +307,7 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
                   onClick={() => document.getElementById('image')?.click()}
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  {imageFile ? imageFile.name : 'Seleccionar Imagen'}
+                  {imageFile ? imageFile.name : ti.selectImage}
                 </Button>
               </div>
               {imageFile && (
@@ -315,17 +319,17 @@ export function AddItemForm({ projectId, onSuccess }: AddItemFormProps) {
 
           {/* Descripción en toda la anchura */}
           <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium text-center block">Descripción (Opcional)</label>
+            <label htmlFor="description" className="text-sm font-medium text-center block">{tf.descriptionOptional}</label>
             <textarea
               id="description"
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-3 text-sm text-center ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-              placeholder="Detalles del producto, proveedor, especificaciones técnicas..."
+              placeholder={ti.descPlaceholder}
               {...register('description')}
             />
           </div>
 
           <Button type="submit" className="w-full" loading={isLoading}>
-            Agregar Producto
+            {ti.submit}
           </Button>
         </form>
       </CardContent>

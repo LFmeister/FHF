@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { projectsService, type ProjectMember } from '@/lib/projects'
 import { permissions, type UserRole } from '@/lib/permissions'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface ProjectMembersProps {
   projectId: string
@@ -17,6 +18,8 @@ export function ProjectMembers({ projectId, currentUserId, userRole }: ProjectMe
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingMember, setUpdatingMember] = useState<string | null>(null)
+  const { t } = useLanguage()
+  const tm = t.members
 
   useEffect(() => {
     loadMembers()
@@ -35,12 +38,12 @@ export function ProjectMembers({ projectId, currentUserId, userRole }: ProjectMe
 
   const handleRoleChange = async (memberId: string, userId: string, newRole: UserRole) => {
     if (!permissions.canManageMembers(userRole)) {
-      alert('No tienes permisos para cambiar roles')
+      alert(tm.noPermissionRoles)
       return
     }
 
     if (userId === currentUserId) {
-      alert('No puedes cambiar tu propio rol')
+      alert(tm.cannotChangeOwnRole)
       return
     }
 
@@ -50,7 +53,7 @@ export function ProjectMembers({ projectId, currentUserId, userRole }: ProjectMe
       await loadMembers()
     } catch (error) {
       console.error('Error updating member role:', error)
-      alert('Error al actualizar el rol del miembro')
+      alert(tm.roleUpdateError)
     } finally {
       setUpdatingMember(null)
     }
@@ -58,22 +61,22 @@ export function ProjectMembers({ projectId, currentUserId, userRole }: ProjectMe
 
   const handleRemoveMember = async (memberId: string, userId: string) => {
     if (!permissions.canManageMembers(userRole)) {
-      alert('No tienes permisos para remover miembros')
+      alert(tm.noPermissionRemove)
       return
     }
 
     if (userId === currentUserId) {
-      alert('No puedes removerte a ti mismo del proyecto')
+      alert(tm.cannotRemoveSelf)
       return
     }
 
-    if (confirm('¿Estás seguro de que quieres remover este miembro del proyecto?')) {
+    if (confirm(tm.confirmRemove)) {
       try {
         await projectsService.removeMember(projectId, userId)
         await loadMembers()
       } catch (error) {
         console.error('Error removing member:', error)
-        alert('Error al remover el miembro')
+        alert(tm.removeError)
       }
     }
   }
@@ -114,10 +117,10 @@ export function ProjectMembers({ projectId, currentUserId, userRole }: ProjectMe
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Miembros del Proyecto ({members.length})
+          {tm.title} ({members.length})
         </CardTitle>
         <CardDescription>
-          Gestiona los miembros y sus roles en el proyecto
+          {tm.subtitle}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -135,30 +138,30 @@ export function ProjectMembers({ projectId, currentUserId, userRole }: ProjectMe
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                       <p className="font-medium text-gray-900 break-words">
-                        {member.user?.full_name || 'Sin nombre'}
+                        {member.user?.full_name || t.common.noName}
                         {member.user_id === currentUserId && (
-                          <span className="text-sm text-gray-500 ml-2">(Tú)</span>
+                          <span className="text-sm text-gray-500 ml-2">({t.common.you})</span>
                         )}
                       </p>
                       {!member.user?.full_name && (
                         <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full w-fit">
-                          Sin nombre configurado
+                          {tm.noNameConfigured}
                         </span>
                       )}
                     </div>
                     <p className="text-sm text-gray-500 break-all">{member.user?.email}</p>
                     <p className="text-xs text-gray-400">
-                      Miembro desde: {new Date(member.joined_at).toLocaleDateString('es-CO')}
+                      {tm.memberSince} {new Date(member.joined_at).toLocaleDateString(t.locale)}
                     </p>
                     <div className="mt-2 sm:hidden">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${permissions.getRoleColor(member.role as UserRole)}`}>
-                        {permissions.getRoleDisplayName(member.role as UserRole)}
+                        {t.roles[member.role as UserRole]}
                       </span>
                     </div>
                   </div>
                   <div className="hidden sm:block">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${permissions.getRoleColor(member.role as UserRole)}`}>
-                      {permissions.getRoleDisplayName(member.role as UserRole)}
+                      {t.roles[member.role as UserRole]}
                     </span>
                   </div>
                 </div>
@@ -174,7 +177,7 @@ export function ProjectMembers({ projectId, currentUserId, userRole }: ProjectMe
                       >
                         {permissions.getAssignableRoles().map((role) => (
                           <option key={role} value={role}>
-                            {permissions.getRoleDisplayName(role)}
+                            {t.roles[role]}
                           </option>
                         ))}
                       </select>
@@ -185,7 +188,7 @@ export function ProjectMembers({ projectId, currentUserId, userRole }: ProjectMe
                         className="text-red-600 hover:text-red-800 hover:bg-red-50 w-full sm:w-auto"
                       >
                         <Trash2 className="h-4 w-4 mr-2 sm:mr-0" />
-                        <span className="sm:hidden">Eliminar miembro</span>
+                        <span className="sm:hidden">{tm.removeMember}</span>
                       </Button>
                     </>
                   )}
@@ -197,42 +200,42 @@ export function ProjectMembers({ projectId, currentUserId, userRole }: ProjectMe
           {members.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>No hay miembros en este proyecto</p>
+              <p>{tm.noMembers}</p>
             </div>
           )}
         </div>
 
         <div className="mt-6 pt-6 border-t border-gray-200">
           <div className="bg-blue-50 rounded-lg p-3 sm:p-4">
-            <h4 className="font-medium text-blue-900 mb-3">Descripción de Roles</h4>
+            <h4 className="font-medium text-blue-900 mb-3">{tm.rolesTitle}</h4>
             <div className="space-y-3 text-sm">
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Crown className="h-4 w-4 text-purple-600" />
-                  <span className="font-medium">Propietario:</span>
+                  <span className="font-medium">{t.roles.owner}:</span>
                 </div>
-                <span className="text-gray-600 break-words">Acceso completo al proyecto</span>
+                <span className="text-gray-600 break-words">{tm.ownerDesc}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Shield className="h-4 w-4 text-blue-600" />
-                  <span className="font-medium">Administrador:</span>
+                  <span className="font-medium">{t.roles.admin}:</span>
                 </div>
-                <span className="text-gray-600 break-words">Puede hacer todo excepto eliminar el proyecto</span>
+                <span className="text-gray-600 break-words">{tm.adminDesc}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <User className="h-4 w-4 text-green-600" />
-                  <span className="font-medium">Usuario Normal:</span>
+                  <span className="font-medium">{t.roles.normal}:</span>
                 </div>
-                <span className="text-gray-600 break-words">Puede navegar, crear ingresos y egresos, pero no eliminar</span>
+                <span className="text-gray-600 break-words">{tm.normalDesc}</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Eye className="h-4 w-4 text-gray-600" />
-                  <span className="font-medium">Solo Vista:</span>
+                  <span className="font-medium">{t.roles.view}:</span>
                 </div>
-                <span className="text-gray-600 break-words">Solo puede ver el resumen del proyecto</span>
+                <span className="text-gray-600 break-words">{tm.viewDesc}</span>
               </div>
             </div>
           </div>

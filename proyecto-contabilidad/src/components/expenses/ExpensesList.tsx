@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { expensesService, type Expense } from '@/lib/expenses'
 import { permissions, type UserRole } from '@/lib/permissions'
 import { useConfirm } from '@/hooks/useConfirm'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface ExpensesListProps {
   expenses: Expense[]
@@ -24,6 +25,8 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
   const [uploadingToExpense, setUploadingToExpense] = useState<string | null>(null)
   const { toasts, removeToast, success, error: showError } = useToast()
   const confirmDialog = useConfirm()
+  const { t } = useLanguage()
+  const te = t.expenses
   const [previewFile, setPreviewFile] = useState<{
     id: string
     file_name: string
@@ -34,10 +37,10 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
 
   const handleDelete = async (expenseId: string) => {
     const confirmed = await confirmDialog.confirm({
-      title: 'Eliminar Gasto',
-      message: '¿Estás seguro de que quieres eliminar este gasto? Esta acción no se puede deshacer.',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
+      title: te.deleteTitle,
+      message: te.deleteMessage,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
       variant: 'danger'
     })
 
@@ -49,7 +52,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
       onUpdate?.()
     } catch (error) {
       console.error('Error deleting expense:', error)
-      showError('Error al eliminar el gasto')
+      showError(te.deleteError)
     } finally {
       setDeletingId(null)
     }
@@ -66,7 +69,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
       document.body.removeChild(link)
     } catch (error) {
       console.error('Error downloading file:', error)
-      showError('Error al descargar el archivo')
+      showError(te.downloadError)
     }
   }
 
@@ -77,10 +80,10 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
     try {
       await expensesService.uploadFiles(expenseId, files)
       onUpdate?.()
-      success(`✅ ${files.length} archivo${files.length > 1 ? 's' : ''} subido${files.length > 1 ? 's' : ''} exitosamente`)
+      success(`${files.length} ${te.filesUploaded}`)
     } catch (uploadError) {
       console.error('Error uploading files:', uploadError)
-      showError('❌ Error al subir los archivos. Inténtalo nuevamente.')
+      showError(te.uploadError)
     } finally {
       setUploadingToExpense(null)
     }
@@ -105,7 +108,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    return new Date(dateString).toLocaleDateString(t.locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -138,10 +141,10 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
           <div className="text-center py-8">
             <Receipt className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">
-              No hay gastos registrados
+              {te.emptyTitle}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Comienza agregando el primer gasto del proyecto.
+              {te.emptyDesc}
             </p>
           </div>
         </CardContent>
@@ -158,7 +161,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
-            Total de Gastos
+            {te.totalTitle}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -166,7 +169,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
             {formatCurrency(totalExpenses)}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Suma de todos los gastos registrados
+            {te.totalDesc}
           </p>
         </CardContent>
       </Card>
@@ -174,9 +177,9 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
       {/* Expenses List */}
       <Card>
         <CardHeader>
-          <CardTitle>Historial de Gastos</CardTitle>
+          <CardTitle>{te.historyTitle}</CardTitle>
           <CardDescription>
-            Todos los gastos registrados en el proyecto
+            {te.historyDesc}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -231,10 +234,10 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
                   
                   <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
                     <span>
-                      <strong>Realizado por:</strong> {expense.performed_user?.full_name || expense.performed_user?.email || (expense.performed_by === currentUserId ? 'Tú' : 'Usuario desconocido')}
+                      <strong>{te.performedBy}</strong> {expense.performed_user?.full_name || expense.performed_user?.email || (expense.performed_by === currentUserId ? t.common.you : t.common.unknownUser)}
                     </span>
                     <span>
-                      <strong>Registrado por:</strong> {expense.user?.full_name || expense.user?.email || 'Usuario desconocido'}
+                      <strong>{te.registeredBy}</strong> {expense.user?.full_name || expense.user?.email || t.common.unknownUser}
                     </span>
                   </div>
 
@@ -250,7 +253,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
                             )}
                           >
                             <Eye className="h-4 w-4 mr-1" />
-                            {expandedExpense === expense.id ? 'Ocultar' : 'Ver'} archivos ({expense.expense_files.length})
+                            {expandedExpense === expense.id ? te.hideFiles : te.viewFiles} ({expense.expense_files.length})
                           </Button>
                         )}
                         
@@ -263,7 +266,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
                             className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                           >
                             <Upload className="h-4 w-4 mr-1" />
-                            {uploadingToExpense === expense.id ? 'Subiendo...' : 'Subir archivos'}
+                            {uploadingToExpense === expense.id ? t.common.uploading : te.uploadFiles}
                           </Button>
                         )}
                       </div>
@@ -307,7 +310,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
                                     file_type: file.file_type,
                                     file_size: file.file_size
                                   })}
-                                  title="Vista previa"
+                                  title={te.preview}
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
@@ -315,7 +318,7 @@ export function ExpensesList({ expenses, currentUserId, userRole = 'view', onUpd
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleFileDownload(file.file_path, file.file_name)}
-                                  title="Descargar"
+                                  title={t.common.download}
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>

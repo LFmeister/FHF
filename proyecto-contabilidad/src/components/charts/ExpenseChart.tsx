@@ -2,6 +2,7 @@
 
 import { PieChart, BarChart3 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface Expense {
   amount: number
@@ -14,9 +15,11 @@ interface ExpenseChartProps {
 }
 
 export function ExpenseChart({ expenses, totalExpenses }: ExpenseChartProps) {
+  const { t } = useLanguage()
+
   // Calculate expenses by category
   const expensesByCategory = expenses.reduce((acc, expense) => {
-    const category = expense.category || 'Sin categoría'
+    const category = expense.category || t.charts.noCategory
     acc[category] = (acc[category] || 0) + expense.amount
     return acc
   }, {} as Record<string, number>)
@@ -40,7 +43,7 @@ export function ExpenseChart({ expenses, totalExpenses }: ExpenseChartProps) {
 
   const colors = [
     'bg-red-500',
-    'bg-orange-500', 
+    'bg-orange-500',
     'bg-yellow-500',
     'bg-green-500',
     'bg-blue-500'
@@ -51,14 +54,14 @@ export function ExpenseChart({ expenses, totalExpenses }: ExpenseChartProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <PieChart className="h-5 w-5" />
-          Gastos por Categoría
+          {t.charts.expensesByCategory}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {categories.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No hay gastos registrados</p>
+            <p>{t.charts.noExpenses}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -81,11 +84,11 @@ export function ExpenseChart({ expenses, totalExpenses }: ExpenseChartProps) {
                 </div>
               ))}
             </div>
-            
+
             {/* Summary */}
             <div className="pt-4 border-t">
               <div className="flex justify-between items-center font-semibold">
-                <span>Total</span>
+                <span>{t.charts.total}</span>
                 <span className="text-red-600">{formatCurrency(totalExpenses)}</span>
               </div>
             </div>

@@ -3,10 +3,12 @@
 import { useSearchParams, useRouter } from 'next/navigation'
 import ProjectPageClient from '@/components/projects/ProjectPageClient'
 import { Button } from '@/components/ui/Button'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function ProjectPageByQuery() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { t } = useLanguage()
 
   const id = searchParams.get('id') || ''
   const tab = searchParams.get('tab') || undefined
@@ -15,10 +17,10 @@ export default function ProjectPageByQuery() {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="text-center space-y-4">
-          <h2 className="text-xl font-semibold">Falta el parámetro "id"</h2>
-          <p className="text-gray-600">Debes acceder a esta página con ?id=PROJECT_ID</p>
+          <h2 className="text-xl font-semibold">{t.project.missingIdParam}</h2>
+          <p className="text-gray-600">{t.project.missingIdHint}</p>
           <div>
-            <Button onClick={() => router.push('/dashboard')}>Volver al Dashboard</Button>
+            <Button onClick={() => router.push('/dashboard')}>{t.notFound.backToDashboard}</Button>
           </div>
         </div>
       </div>

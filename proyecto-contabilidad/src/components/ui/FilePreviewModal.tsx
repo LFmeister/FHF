@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Download, ZoomIn, ZoomOut, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { expensesService } from '@/lib/expenses'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface FilePreviewModalProps {
   isOpen: boolean
@@ -18,6 +19,7 @@ interface FilePreviewModalProps {
 }
 
 export function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProps) {
+  const { t } = useLanguage()
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,15 +39,15 @@ export function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProp
 
   const loadFileUrl = async () => {
     if (!file) return
-    
+
     setLoading(true)
     setError(null)
-    
+
     try {
       const url = await expensesService.getFileUrl(file.file_path)
       setFileUrl(url)
     } catch (err) {
-      setError('Error al cargar el archivo')
+      setError(t.filePreview.loadError)
       console.error('Error loading file:', err)
     } finally {
       setLoading(false)
@@ -54,7 +56,7 @@ export function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProp
 
   const handleDownload = async () => {
     if (!file || !fileUrl) return
-    
+
     try {
       const link = document.createElement('a')
       link.href = fileUrl
@@ -84,7 +86,7 @@ export function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProp
               {file.file_type} • {formatFileSize(file.file_size)}
             </p>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {isImage && (
               <>
@@ -116,11 +118,11 @@ export function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProp
                 </Button>
               </>
             )}
-            
+
             <Button variant="ghost" size="sm" onClick={handleDownload}>
               <Download className="h-4 w-4" />
             </Button>
-            
+
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
@@ -133,7 +135,7 @@ export function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProp
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Cargando archivo...</p>
+                <p className="text-gray-600">{t.filePreview.loading}</p>
               </div>
             </div>
           )}
@@ -142,7 +144,7 @@ export function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProp
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <p className="text-red-600 mb-4">{error}</p>
-                <Button onClick={loadFileUrl}>Reintentar</Button>
+                <Button onClick={loadFileUrl}>{t.common.retry}</Button>
               </div>
             </div>
           )}
@@ -176,7 +178,7 @@ export function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProp
                   className="max-w-full max-h-full"
                   style={{ maxHeight: '80vh' }}
                 >
-                  Tu navegador no soporta la reproducción de video.
+                  {t.filePreview.videoUnsupported}
                 </video>
               )}
 
@@ -184,11 +186,11 @@ export function FilePreviewModal({ isOpen, onClose, file }: FilePreviewModalProp
                 <div className="text-center">
                   <div className="text-6xl mb-4">📄</div>
                   <p className="text-gray-600 mb-4">
-                    Vista previa no disponible para este tipo de archivo
+                    {t.filePreview.noPreview}
                   </p>
                   <Button onClick={handleDownload}>
                     <Download className="h-4 w-4 mr-2" />
-                    Descargar archivo
+                    {t.filePreview.downloadFile}
                   </Button>
                 </div>
               )}

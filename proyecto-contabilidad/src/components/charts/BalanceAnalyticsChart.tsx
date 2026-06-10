@@ -6,23 +6,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DollarSign, TrendingUp, Users } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import { type Balance } from '@/lib/balances'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface BalanceAnalyticsChartProps {
   balances: Balance[]
 }
 
 export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) {
+  const { t } = useLanguage()
+
   // Mapa de usuarioId -> nombre para etiquetas
   const userIdToName = useMemo(() => {
     const map: Record<string, string> = {}
     balances.forEach((b) => {
-      const label = b.performed_user?.full_name || b.performed_user?.email || 'Usuario desconocido'
+      const label = b.performed_user?.full_name || b.performed_user?.email || t.common.unknownUser
       if (b.performed_by) {
         map[b.performed_by] = label
       }
     })
     return map
-  }, [balances])
+  }, [balances, t])
 
   const userIds = useMemo(() => Object.keys(userIdToName), [userIdToName])
 
@@ -58,7 +61,7 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
   // Datos para el gráfico por usuario
   const userBalanceData = useMemo(() => {
     const userTotals = balances.reduce((acc, balance) => {
-      const userName = balance.performed_user?.full_name || balance.performed_user?.email || 'Usuario desconocido'
+      const userName = balance.performed_user?.full_name || balance.performed_user?.email || t.common.unknownUser
       acc[userName] = (acc[userName] || 0) + balance.amount
       return acc
     }, {} as Record<string, number>)
@@ -67,11 +70,11 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
       name: name.length > 15 ? name.substring(0, 15) + '...' : name,
       fullName: name,
       total,
-      count: balances.filter(b => 
-        (b.performed_user?.full_name || b.performed_user?.email || 'Usuario desconocido') === name
+      count: balances.filter(b =>
+        (b.performed_user?.full_name || b.performed_user?.email || t.common.unknownUser) === name
       ).length
     }))
-  }, [balances])
+  }, [balances, t])
 
   // Colores para los gráficos
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16']
@@ -86,10 +89,10 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
           <CardContent className="flex flex-col items-center justify-center py-12">
             <DollarSign className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-              No hay balances registrados
+              {t.balances.analyticsNoBalances}
             </h3>
             <p className="text-sm text-muted-foreground text-center">
-              Agrega el primer balance para ver las gráficas de análisis.
+              {t.balances.analyticsNoBalancesDesc}
             </p>
           </CardContent>
         </Card>
@@ -105,7 +108,7 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
-              Balance Total
+              {t.balances.analyticsTotal}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -113,7 +116,7 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
               {formatCurrency(totalBalance)}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {balances.length} registros
+              {balances.length} {t.balances.analyticsRecords}
             </p>
           </CardContent>
         </Card>
@@ -122,7 +125,7 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Promedio por Registro
+              {t.balances.analyticsAvg}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -130,7 +133,7 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
               {formatCurrency(averageBalance)}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Por transacción
+              {t.balances.analyticsPerTx}
             </p>
           </CardContent>
         </Card>
@@ -139,7 +142,7 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Usuarios Activos
+              {t.balances.analyticsActiveUsers}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -147,7 +150,7 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
               {userBalanceData.length}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Han registrado balances
+              {t.balances.analyticsHaveRegistered}
             </p>
           </CardContent>
         </Card>
@@ -159,32 +162,32 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Balance por Usuario en el Tiempo
+              {t.balances.analyticsByUserTime}
             </CardTitle>
             <CardDescription>
-              Muestra los balances ingresados por usuario agrupados por fecha
+              {t.balances.analyticsByUserTimeDesc}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={450}>
-              <BarChart 
+              <BarChart
                 data={timeUserData}
                 margin={{ top: 40, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
+                <XAxis
+                  dataKey="date"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                 />
-                <YAxis 
+                <YAxis
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(value) => formatCurrency(value)}
                 />
-                <Tooltip 
+                <Tooltip
                   formatter={(value: any) => formatCurrency(Number(value))}
                 />
                 <Legend />
@@ -192,7 +195,7 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
                   <Bar
                     key={userId}
                     dataKey={userId}
-                    name={userIdToName[userId] || 'Usuario desconocido'}
+                    name={userIdToName[userId] || t.common.unknownUser}
                     stackId="a"
                     fill={colors[index % colors.length]}
                     radius={[4, 4, 0, 0]}
@@ -207,10 +210,10 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
-              Distribución Porcentual
+              {t.balances.analyticsDistribution}
             </CardTitle>
             <CardDescription>
-              Porcentaje del balance total por usuario
+              {t.balances.analyticsDistributionDesc}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -230,7 +233,7 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload
@@ -238,10 +241,10 @@ export function BalanceAnalyticsChart({ balances }: BalanceAnalyticsChartProps) 
                         <div className="bg-white p-3 border rounded-lg shadow-lg">
                           <p className="font-semibold">{data.fullName}</p>
                           <p className="text-blue-600">
-                            Total: {formatCurrency(data.total)}
+                            {t.balances.analyticsTooltipTotal} {formatCurrency(data.total)}
                           </p>
                           <p className="text-gray-600 text-sm">
-                            {data.count} registro{data.count !== 1 ? 's' : ''}
+                            {data.count} {data.count !== 1 ? t.balances.analyticsTooltipRecords : t.balances.analyticsTooltipRecord}
                           </p>
                         </div>
                       )

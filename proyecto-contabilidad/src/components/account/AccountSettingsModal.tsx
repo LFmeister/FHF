@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { auth } from '@/lib/auth'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface AccountSettingsModalProps {
   isOpen: boolean
@@ -15,6 +16,8 @@ interface AccountSettingsModalProps {
 }
 
 export function AccountSettingsModal({ isOpen, onClose, currentEmail, currentFullName, onUpdated }: AccountSettingsModalProps) {
+  const { t } = useLanguage()
+  const ta = t.account
   const [fullName, setFullName] = useState(currentFullName || '')
   const [email, setEmail] = useState(currentEmail)
   const [password, setPassword] = useState('')
@@ -34,16 +37,16 @@ export function AccountSettingsModal({ isOpen, onClose, currentEmail, currentFul
   const handleUpdateName = async () => {
     setMsg(null); setErr(null)
     if (!fullName.trim()) {
-      setErr('El nombre no puede estar vacío')
+      setErr(ta.nameEmpty)
       return
     }
     setSavingName(true)
     const { error } = await auth.updateFullName(fullName.trim())
     setSavingName(false)
     if (error) {
-      setErr(error.message || 'Error al actualizar el nombre')
+      setErr(error.message || ta.nameError)
     } else {
-      setMsg('Nombre actualizado correctamente')
+      setMsg(ta.nameUpdated)
       onUpdated?.()
     }
   }
@@ -53,11 +56,11 @@ export function AccountSettingsModal({ isOpen, onClose, currentEmail, currentFul
   const handleUpdateEmail = async () => {
     setMsg(null); setErr(null)
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setErr('Ingresa un email válido')
+      setErr(ta.emailInvalid)
       return
     }
     if (email.trim() === currentEmail) {
-      setErr('El nuevo email debe ser diferente al actual')
+      setErr(ta.emailSame)
       return
     }
     setSavingEmail(true)
@@ -66,37 +69,37 @@ export function AccountSettingsModal({ isOpen, onClose, currentEmail, currentFul
     if (error) {
       // Handle specific Supabase errors
       if (error.message?.includes('already registered')) {
-        setErr('Este email ya está registrado por otro usuario')
+        setErr(ta.emailTaken)
       } else if (error.message?.includes('rate limit')) {
-        setErr('Demasiados intentos. Espera unos minutos antes de intentar de nuevo')
+        setErr(ta.emailRateLimit)
       } else {
-        setErr(error.message || 'Error al actualizar el email')
+        setErr(error.message || ta.emailError)
       }
     } else {
-      setMsg('Se ha enviado un email de confirmación. Revisa tu bandeja de entrada y confirma el cambio antes de que tome efecto.')
+      setMsg(ta.emailSent)
       onUpdated?.()
     }
   }
 
   const handleUpdatePassword = async () => {
     setMsg(null); setErr(null)
-    
+
     if (password.length < 6) {
-      setErr('La contraseña debe tener al menos 6 caracteres')
+      setErr(ta.passwordMin)
       return
     }
     if (password !== password2) {
-      setErr('Las contraseñas no coinciden')
+      setErr(ta.passwordMismatch)
       return
     }
-    
+
     setSavingPass(true)
     const { error } = await auth.updatePassword(password)
     setSavingPass(false)
     if (error) {
-      setErr(error.message || 'Error al actualizar la contraseña')
+      setErr(error.message || ta.passwordError)
     } else {
-      setMsg('Contraseña actualizada correctamente')
+      setMsg(ta.passwordUpdated)
       setPassword('')
       setPassword2('')
     }
@@ -107,7 +110,7 @@ export function AccountSettingsModal({ isOpen, onClose, currentEmail, currentFul
       <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">Ajustes de Cuenta</h3>
+          <h3 className="text-lg font-semibold">{ta.title}</h3>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -124,37 +127,37 @@ export function AccountSettingsModal({ isOpen, onClose, currentEmail, currentFul
 
           {/* Editar nombre */}
           <section>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Editar nombre</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">{ta.editName}</h4>
             <div className="flex gap-2">
-              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre" />
-              <Button onClick={handleUpdateName} loading={savingName}>Guardar</Button>
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={ta.namePlaceholder} />
+              <Button onClick={handleUpdateName} loading={savingName}>{t.common.save}</Button>
             </div>
           </section>
 
           {/* Cambiar email */}
           <section>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Cambiar email</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">{ta.changeEmail}</h4>
             <div className="flex gap-2">
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@correo.com" />
-              <Button onClick={handleUpdateEmail} loading={savingEmail}>Guardar</Button>
+              <Button onClick={handleUpdateEmail} loading={savingEmail}>{t.common.save}</Button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              <strong>Importante:</strong> Se enviará un email de confirmación. El cambio no será efectivo hasta que confirmes desde tu correo.
+              <strong>{ta.emailImportant}</strong> {ta.emailNote}
             </p>
           </section>
 
           {/* Cambiar contraseña */}
           <section>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Cambiar contraseña</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">{ta.changePassword}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Nueva contraseña" />
-              <Input type="password" value={password2} onChange={(e) => setPassword2(e.target.value)} placeholder="Confirmar contraseña" />
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={ta.newPassword} />
+              <Input type="password" value={password2} onChange={(e) => setPassword2(e.target.value)} placeholder={ta.confirmPassword} />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Mínimo 6 caracteres
+              {ta.minChars}
             </p>
             <div className="mt-2">
-              <Button onClick={handleUpdatePassword} loading={savingPass}>Actualizar contraseña</Button>
+              <Button onClick={handleUpdatePassword} loading={savingPass}>{ta.updatePassword}</Button>
             </div>
           </section>
 

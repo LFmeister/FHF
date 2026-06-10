@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { auth } from '@/lib/auth'
 import { AuthShell } from '@/components/auth/AuthShell'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -15,6 +16,7 @@ export default function AuthCallbackPage() {
   const [resendLoading, setResendLoading] = useState(false)
   const [resendInfo, setResendInfo] = useState<string | null>(null)
 
+  const { t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -32,7 +34,7 @@ export default function AuthCallbackPage() {
         const { set: setFromHash } = await auth.setSessionFromHash()
         if (setFromHash) {
           setStatus('success')
-          setMessage('Correo confirmado correctamente.')
+          setMessage(t.auth.callback.confirmedMessage)
           setTimeout(() => router.push('/dashboard'), 2500)
           return
         }
@@ -52,34 +54,34 @@ export default function AuthCallbackPage() {
         if (error) {
           setStatus('error')
           if (error === 'access_denied' && errorDescription?.includes('expired')) {
-            setMessage('El enlace de confirmacion ha expirado.')
+            setMessage(t.auth.callback.linkExpired)
           } else if (error === 'access_denied' && errorDescription?.includes('invalid')) {
-            setMessage('El enlace de confirmacion no es valido.')
+            setMessage(t.auth.callback.linkInvalid)
           } else {
-            setMessage(errorDescription || 'Error en la autenticacion.')
+            setMessage(errorDescription || t.auth.callback.authError)
           }
           return
         }
 
         if (!code) {
           setStatus('error')
-          setMessage('No se encontro codigo de confirmacion en la URL.')
+          setMessage(t.auth.callback.noCode)
           return
         }
 
         const { error: exchangeError } = await auth.exchangeCodeForSession(code)
         if (exchangeError) {
           setStatus('error')
-          setMessage(exchangeError.message || 'No fue posible confirmar el correo.')
+          setMessage(exchangeError.message || t.auth.callback.exchangeError)
           return
         }
 
         setStatus('success')
-        setMessage('Correo confirmado correctamente.')
+        setMessage(t.auth.callback.confirmedMessage)
         setTimeout(() => router.push('/dashboard'), 2500)
       } catch (error) {
         setStatus('error')
-        setMessage('Ocurrio un error inesperado durante la confirmacion.')
+        setMessage(t.auth.callback.unexpected)
       }
     }
 
@@ -92,14 +94,14 @@ export default function AuthCallbackPage() {
     try {
       const target = email.trim()
       if (!target) {
-        setResendInfo('Ingresa tu email para reenviar la confirmacion.')
+        setResendInfo(t.auth.callback.enterEmail)
         return
       }
       const { error } = await auth.resendConfirmation(target)
       if (error) {
-        setResendInfo(`No se pudo reenviar: ${error.message}`)
+        setResendInfo(`${t.auth.callback.resendFailed} ${error.message}`)
       } else {
-        setResendInfo('Correo reenviado. Revisa tu bandeja y spam.')
+        setResendInfo(t.auth.callback.resendOk)
       }
     } finally {
       setResendLoading(false)
@@ -108,15 +110,15 @@ export default function AuthCallbackPage() {
 
   return (
     <AuthShell
-      title="Confirmacion de cuenta"
-      subtitle="Estamos validando tu enlace de autenticacion."
+      title={t.auth.callback.title}
+      subtitle={t.auth.callback.subtitle}
       backHref="/auth/login"
-      backLabel="volver al login"
+      backLabel={t.auth.callback.backLabel}
     >
       {status === 'loading' && (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
           <Loader2 className="mx-auto h-9 w-9 animate-spin text-primary-700" />
-          <p className="mt-3 text-sm text-slate-600">Procesando confirmacion...</p>
+          <p className="mt-3 text-sm text-slate-600">{t.auth.callback.processing}</p>
         </div>
       )}
 
@@ -124,11 +126,11 @@ export default function AuthCallbackPage() {
         <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
           <div className="flex items-center gap-2 text-emerald-700">
             <CheckCircle className="h-5 w-5" />
-            <p className="font-semibold">Cuenta confirmada</p>
+            <p className="font-semibold">{t.auth.callback.confirmedTitle}</p>
           </div>
           <p className="text-sm text-emerald-800">{message}</p>
           <Button className="w-full" onClick={() => router.push('/dashboard')}>
-            Ir al dashboard
+            {t.auth.callback.goToDashboard}
           </Button>
         </div>
       )}
@@ -137,16 +139,16 @@ export default function AuthCallbackPage() {
         <div className="space-y-4 rounded-2xl border border-red-200 bg-red-50 p-5">
           <div className="flex items-center gap-2 text-red-700">
             <XCircle className="h-5 w-5" />
-            <p className="font-semibold">No se pudo confirmar el correo</p>
+            <p className="font-semibold">{t.auth.callback.failedTitle}</p>
           </div>
           <p className="text-sm text-red-700">{message}</p>
 
           <div className="space-y-2 rounded-xl border border-red-200 bg-white p-3">
-            <label className="text-sm font-semibold text-slate-700">Reenviar confirmacion</label>
+            <label className="text-sm font-semibold text-slate-700">{t.auth.callback.resendLabel}</label>
             <div className="flex gap-2">
               <Input type="email" placeholder="tu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               <Button onClick={handleResend} disabled={resendLoading}>
-                {resendLoading ? 'Enviando...' : 'Reenviar'}
+                {resendLoading ? t.auth.callback.sending : t.auth.callback.resend}
               </Button>
             </div>
             {resendInfo && (
@@ -156,10 +158,10 @@ export default function AuthCallbackPage() {
 
           <div className="grid gap-2 sm:grid-cols-2">
             <Button variant="outline" onClick={() => router.push('/auth/login')}>
-              Ir al login
+              {t.auth.callback.goLogin}
             </Button>
             <Button onClick={() => router.push('/auth/register')}>
-              Registrarse
+              {t.auth.callback.register}
             </Button>
           </div>
         </div>

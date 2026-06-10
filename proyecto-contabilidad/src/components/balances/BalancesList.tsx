@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { balancesService, type Balance } from '@/lib/balances'
 import { permissions, type UserRole } from '@/lib/permissions'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface BalancesListProps {
   balances: Balance[]
@@ -15,10 +16,11 @@ interface BalancesListProps {
 }
 
 export function BalancesList({ balances, currentUserId, userRole = 'view', onUpdate }: BalancesListProps) {
+  const { t } = useLanguage()
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleDelete = async (balanceId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este balance?')) return
+    if (!confirm(t.balances.confirmDelete)) return
 
     setDeletingId(balanceId)
     try {
@@ -26,7 +28,7 @@ export function BalancesList({ balances, currentUserId, userRole = 'view', onUpd
       onUpdate?.()
     } catch (error) {
       console.error('Error deleting balance:', error)
-      alert('Error al eliminar el balance')
+      alert(t.balances.deleteError)
     } finally {
       setDeletingId(null)
     }
@@ -53,10 +55,10 @@ export function BalancesList({ balances, currentUserId, userRole = 'view', onUpd
           <div className="text-center py-8">
             <DollarSign className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">
-              No hay balances registrados
+              {t.balances.emptyTitle}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Comienza agregando un balance inicial al proyecto.
+              {t.balances.emptyDesc}
             </p>
           </div>
         </CardContent>
@@ -73,7 +75,7 @@ export function BalancesList({ balances, currentUserId, userRole = 'view', onUpd
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
-            Balance Total
+            {t.balances.totalTitle}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -81,7 +83,7 @@ export function BalancesList({ balances, currentUserId, userRole = 'view', onUpd
             {formatCurrency(totalBalance)}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Suma de todos los balances registrados
+            {t.balances.totalDesc}
           </p>
         </CardContent>
       </Card>
@@ -89,9 +91,9 @@ export function BalancesList({ balances, currentUserId, userRole = 'view', onUpd
       {/* Balances List */}
       <Card>
         <CardHeader>
-          <CardTitle>Historial de Balances</CardTitle>
+          <CardTitle>{t.balances.historyTitle}</CardTitle>
           <CardDescription>
-            Todos los balances registrados en el proyecto
+            {t.balances.historyDesc}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -112,20 +114,20 @@ export function BalancesList({ balances, currentUserId, userRole = 'view', onUpd
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       <span>{formatDate(balance.created_at)}</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mt-2">
                     <span>
-                      <strong>Realizado por:</strong> {balance.performed_user?.full_name || balance.performed_user?.email || 'Usuario desconocido'}
+                      <strong>{t.balances.performedByLabel}</strong> {balance.performed_user?.full_name || balance.performed_user?.email || t.common.unknownUser}
                     </span>
                     <span>
-                      <strong>Registrado por:</strong> {balance.user?.full_name || balance.user?.email || 'Usuario desconocido'}
+                      <strong>{t.balances.registeredByLabel}</strong> {balance.user?.full_name || balance.user?.email || t.common.unknownUser}
                     </span>
                   </div>
                 </div>

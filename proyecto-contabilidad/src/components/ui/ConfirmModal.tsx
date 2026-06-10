@@ -2,6 +2,7 @@
 
 import { AlertTriangle, X } from 'lucide-react'
 import { Button } from './Button'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface ConfirmModalProps {
   isOpen: boolean
@@ -21,11 +22,12 @@ export function ConfirmModal({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirmar',
-  cancelText = 'Cancelar',
+  confirmText,
+  cancelText,
   isLoading = false,
   variant = 'danger'
 }: ConfirmModalProps) {
+  const { t } = useLanguage()
   if (!isOpen) return null
 
   const handleConfirm = () => {
@@ -72,7 +74,7 @@ export function ConfirmModal({
             disabled={isLoading}
             className="w-full sm:w-auto"
           >
-            {cancelText}
+            {cancelText ?? t.common.cancel}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -84,7 +86,7 @@ export function ConfirmModal({
                 : 'bg-yellow-600 hover:bg-yellow-700 text-white'
             }`}
           >
-            {confirmText}
+            {confirmText ?? t.common.confirm}
           </Button>
         </div>
       </div>

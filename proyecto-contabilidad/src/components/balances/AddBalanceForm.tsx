@@ -11,6 +11,7 @@ import { balancesService } from '@/lib/balances'
 import { projectsService, type ProjectMember } from '@/lib/projects'
 import { supabase } from '@/lib/supabase'
 import { balanceSchema, type BalanceFormData } from '@/lib/validations'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface AddBalanceFormProps {
   projectId: string
@@ -18,6 +19,7 @@ interface AddBalanceFormProps {
 }
 
 export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [members, setMembers] = useState<ProjectMember[]>([])
@@ -74,7 +76,7 @@ export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
         date: data.date,
         performed_by: data.performed_by
       })
-      
+
       reset()
       // Keep current user selected after reset
       if (currentUser) {
@@ -82,7 +84,7 @@ export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
       }
       onSuccess?.()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear el balance')
+      setError(err instanceof Error ? err.message : t.balances.createError)
     } finally {
       setIsLoading(false)
     }
@@ -93,10 +95,10 @@ export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5" />
-          Agregar Balance
+          {t.balances.addTitle}
         </CardTitle>
         <CardDescription>
-          Registra un nuevo balance inicial o ajuste al proyecto
+          {t.balances.addDesc}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -111,7 +113,7 @@ export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label htmlFor="amount" className="text-sm font-medium">
-                Monto *
+                {t.balances.amount}
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-3 text-sm text-muted-foreground">$</span>
@@ -127,13 +129,13 @@ export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Sin decimales (ej: 100000)
+                {t.balances.amountHint}
               </p>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="date" className="text-sm font-medium">
-                Fecha *
+                {t.balances.dateLabel}
               </label>
               <Input
                 id="date"
@@ -145,7 +147,7 @@ export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
 
             <div className="space-y-2">
               <label htmlFor="performed_by" className="text-sm font-medium">
-                Realizado por *
+                {t.balances.performedBy}
               </label>
               <Controller
                 name="performed_by"
@@ -157,14 +159,14 @@ export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
                     value={(field.value && field.value !== '') ? field.value : (currentUser || '')}
                     onChange={field.onChange}
                   >
-                    <option value="">Seleccionar usuario</option>
+                    <option value="">{t.balances.selectUser}</option>
                     {currentUser && !members.some(m => m.user_id === currentUser) && (
-                      <option value={currentUser}>Tú</option>
+                      <option value={currentUser}>{t.common.you}</option>
                     )}
                     {members.map((member) => (
                       <option key={member.user_id} value={member.user_id}>
-                        {member.user?.full_name || member.user?.email || 'Sin nombre'}
-                        {member.user_id === currentUser && ' (Tú)'}
+                        {member.user?.full_name || member.user?.email || t.common.noName}
+                        {member.user_id === currentUser && ` (${t.common.you})`}
                       </option>
                     ))}
                   </select>
@@ -179,11 +181,11 @@ export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
           {/* Registrado por */}
           <div className="bg-gray-50 p-3 rounded-md border">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="font-medium">Registrado por:</span>
+              <span className="font-medium">{t.balances.registeredBy}</span>
               <span>
-                {members.find(m => m.user_id === currentUser)?.user?.full_name || 
-                 members.find(m => m.user_id === currentUser)?.user?.email || 
-                 'Usuario actual'}
+                {members.find(m => m.user_id === currentUser)?.user?.full_name ||
+                 members.find(m => m.user_id === currentUser)?.user?.email ||
+                 t.common.currentUser}
               </span>
             </div>
           </div>
@@ -191,18 +193,18 @@ export function AddBalanceForm({ projectId, onSuccess }: AddBalanceFormProps) {
           {/* Descripción mejorada */}
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">
-              Descripción (Opcional)
+              {t.balances.descLabel}
             </label>
             <textarea
               id="description"
-              placeholder="Ej: Balance inicial del proyecto, Aporte adicional, Ajuste de fondos..."
+              placeholder={t.balances.descPlaceholder}
               className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
               {...register('description')}
             />
           </div>
 
           <Button type="submit" className="w-full" loading={isLoading}>
-            Agregar Balance
+            {t.balances.addBtn}
           </Button>
         </form>
       </CardContent>

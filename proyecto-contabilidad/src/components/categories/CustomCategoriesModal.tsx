@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { categoriesService, type CustomCategory, type CategoryType } from '@/lib/categories'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface CustomCategoriesModalProps {
   projectId: string
@@ -14,12 +15,14 @@ interface CustomCategoriesModalProps {
   onCategoriesUpdated?: () => void
 }
 
-export function CustomCategoriesModal({ 
-  projectId, 
-  isOpen, 
-  onClose, 
-  onCategoriesUpdated 
+export function CustomCategoriesModal({
+  projectId,
+  isOpen,
+  onClose,
+  onCategoriesUpdated
 }: CustomCategoriesModalProps) {
+  const { t } = useLanguage()
+  const tc = t.categories
   const [incomeCategories, setIncomeCategories] = useState<CustomCategory[]>([])
   const [expenseCategories, setExpenseCategories] = useState<CustomCategory[]>([])
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -44,7 +47,7 @@ export function CustomCategoriesModal({
       setIncomeCategories(income)
       setExpenseCategories(expense)
     } catch (err: any) {
-      setError(err.message || 'Error al cargar categorías')
+      setError(err.message || tc.loadError)
     } finally {
       setIsLoading(false)
     }
@@ -60,12 +63,12 @@ export function CustomCategoriesModal({
       await loadCategories()
       onCategoriesUpdated?.()
     } catch (err: any) {
-      setError(err.message || 'Error al crear categoría')
+      setError(err.message || tc.createError)
     }
   }
 
   const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm('¿Eliminar esta categoría? Esta acción no se puede deshacer.')) return
+    if (!confirm(tc.confirmDelete)) return
 
     try {
       setDeletingId(categoryId)
@@ -73,7 +76,7 @@ export function CustomCategoriesModal({
       await loadCategories()
       onCategoriesUpdated?.()
     } catch (err: any) {
-      setError(err.message || 'Error al eliminar categoría')
+      setError(err.message || tc.deleteError)
     } finally {
       setDeletingId(null)
     }
@@ -93,7 +96,7 @@ export function CustomCategoriesModal({
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-2">
             <Tag className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Categorías Personalizadas</h2>
+            <h2 className="text-lg font-semibold">{tc.customCats}</h2>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -110,13 +113,13 @@ export function CustomCategoriesModal({
           {/* Add new category */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Agregar Nueva Categoría</CardTitle>
+              <CardTitle className="text-base">{tc.addNew}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Input
-                    placeholder="Nombre de la categoría"
+                    placeholder={tc.namePlaceholder}
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     onKeyPress={handleKeyPress}
@@ -127,12 +130,12 @@ export function CustomCategoriesModal({
                   onChange={(e) => setSelectedType(e.target.value as CategoryType)}
                   className="px-3 py-2 border border-input rounded-md bg-background text-sm"
                 >
-                  <option value="income">Ingreso</option>
-                  <option value="expense">Gasto</option>
+                  <option value="income">{tc.incomeType}</option>
+                  <option value="expense">{tc.expenseType}</option>
                 </select>
                 <Button onClick={handleAddCategory} disabled={!newCategoryName.trim()}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Agregar
+                  {tc.add}
                 </Button>
               </div>
             </CardContent>
@@ -144,17 +147,17 @@ export function CustomCategoriesModal({
             <Card>
               <CardHeader>
                 <CardTitle className="text-base text-green-600">
-                  Categorías de Ingresos ({incomeCategories.length})
+                  {t.categories.incomeCatsTitle} ({incomeCategories.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <div className="text-center py-4 text-sm text-gray-500">
-                    Cargando...
+                    {t.common.loading}
                   </div>
                 ) : incomeCategories.length === 0 ? (
                   <div className="text-center py-4 text-sm text-gray-500">
-                    No hay categorías personalizadas
+                    {tc.noCustom}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -184,17 +187,17 @@ export function CustomCategoriesModal({
             <Card>
               <CardHeader>
                 <CardTitle className="text-base text-red-600">
-                  Categorías de Gastos ({expenseCategories.length})
+                  {t.categories.expenseCatsTitle} ({expenseCategories.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <div className="text-center py-4 text-sm text-gray-500">
-                    Cargando...
+                    {t.common.loading}
                   </div>
                 ) : expenseCategories.length === 0 ? (
                   <div className="text-center py-4 text-sm text-gray-500">
-                    No hay categorías personalizadas
+                    {tc.noCustom}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -222,8 +225,7 @@ export function CustomCategoriesModal({
           </div>
 
           <div className="text-xs text-gray-500 text-center">
-            Las categorías personalizadas se combinan con las categorías predeterminadas del sistema.
-            Solo puedes eliminar las categorías que hayas creado.
+            {t.categories.customFooter}
           </div>
         </div>
       </div>

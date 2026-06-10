@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ui/Toast'
 import { GreenhouseManual } from '@/components/greenhouse/GreenhouseManual'
+import { useLanguage } from '@/context/LanguageContext'
 import { greenhouseService, type ProjectGreenhouseDashboard } from '@/lib/greenhouse'
 import { permissions, type UserRole } from '@/lib/permissions'
 
@@ -29,8 +30,8 @@ interface GreenhouseTabProps {
   userRole: UserRole
 }
 
-function formatDateTime(value: string | null, timeZone = 'America/Bogota') {
-  if (!value) return 'Sin dato'
+function formatDateTime(value: string | null, timeZone = 'America/Bogota', noDataLabel = 'Sin dato') {
+  if (!value) return noDataLabel
 
   try {
     return new Intl.DateTimeFormat('es-CO', {
@@ -63,16 +64,16 @@ function statusTone(status: string) {
   return 'bg-slate-100 text-slate-700 border-slate-200'
 }
 
-function metricValue(value: number | null, suffix: string) {
-  if (value === null || value === undefined) return 'Sin dato'
+function metricValue(value: number | null, suffix: string, noDataLabel = 'Sin dato') {
+  if (value === null || value === undefined) return noDataLabel
   return `${value}${suffix}`
 }
 
-function tankLevelLabel(telemetry: ProjectGreenhouseDashboard['latestTelemetry'], metadata: Record<string, unknown> = {}) {
-  if (!telemetry) return 'Sin dato'
-  if (getSwitchClosed(telemetry, 'high')) return 'Alto'
-  if (getSwitchClosed(telemetry, 'mid')) return 'Medio'
-  if (getSwitchClosed(telemetry, 'low')) return 'Bajo'
+function tankLevelLabel(telemetry: ProjectGreenhouseDashboard['latestTelemetry'], metadata: Record<string, unknown> = {}, labels = { noData: 'Sin dato', noActiveLevel: 'Sin nivel activo', high: 'Alto', mid: 'Medio', low: 'Bajo' }) {
+  if (!telemetry) return labels.noData
+  if (getSwitchClosed(telemetry, 'high')) return labels.high
+  if (getSwitchClosed(telemetry, 'mid')) return labels.mid
+  if (getSwitchClosed(telemetry, 'low')) return labels.low
   if (telemetry.float_state) return telemetry.float_state
   if (
     telemetry.float_low_raw !== null ||
@@ -82,22 +83,22 @@ function tankLevelLabel(telemetry: ProjectGreenhouseDashboard['latestTelemetry']
     telemetry.float_mid_state ||
     telemetry.float_high_state
   ) {
-    return 'Sin nivel activo'
+    return labels.noActiveLevel
   }
-  return 'Sin dato'
+  return labels.noData
 }
 
-function floatSwitchValue(state: string | null | undefined, raw: number | null | undefined) {
+function floatSwitchValue(state: string | null | undefined, raw: number | null | undefined, noDataLabel = 'sin dato') {
   if (state) return translateSwitchState(state)
   if (raw !== null && raw !== undefined) return String(raw)
-  return 'sin dato'
+  return noDataLabel
 }
 
-function translateSwitchState(state: string | null | undefined) {
+function translateSwitchState(state: string | null | undefined, labels = { open: 'abierto', closed: 'cerrado', noData: 'sin dato' }) {
   const normalized = state?.toLowerCase()
-  if (normalized === 'open') return 'abierto'
-  if (normalized === 'closed') return 'cerrado'
-  return state || 'sin dato'
+  if (normalized === 'open') return labels.open
+  if (normalized === 'closed') return labels.closed
+  return state || labels.noData
 }
 
 function getNestedRecord(value: Record<string, unknown>, key: string) {
@@ -105,7 +106,7 @@ function getNestedRecord(value: Record<string, unknown>, key: string) {
   return nested && typeof nested === 'object' && !Array.isArray(nested) ? (nested as Record<string, unknown>) : {}
 }
 
-function getTankConfig(metadata: Record<string, unknown>) {
+function getTankConfig(metadata: Record<string, unknown>, tankLabels = { mainTank: 'Tanque principal', high: 'Alto', mid: 'Medio', low: 'Bajo' }) {
   const tank = getNestedRecord(metadata, 'tank_config')
   const sensors = getNestedRecord(tank, 'sensors')
 
@@ -125,13 +126,13 @@ function getTankConfig(metadata: Record<string, unknown>) {
   }
 
   return {
-    label: String(tank.label || 'Tanque principal'),
+    label: String(tank.label || tankLabels.mainTank),
     capacityLiters: tank.capacity_liters === undefined || tank.capacity_liters === null ? null : readNumber(tank.capacity_liters, 0),
     shape: String(tank.shape || 'vertical'),
     sensors: [
-      sensorConfig('high', 'Alto', 90),
-      sensorConfig('mid', 'Medio', 55),
-      sensorConfig('low', 'Bajo', 20),
+      sensorConfig('high', tankLabels.high, 90),
+      sensorConfig('mid', tankLabels.mid, 55),
+      sensorConfig('low', tankLabels.low, 20),
     ],
   }
 }
@@ -267,14 +268,19 @@ function tankSwitchStateClass(key: string, telemetry: ProjectGreenhouseDashboard
 }
 
 function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
+  const { t } = useLanguage()
+  const g = t.greenhouse
+  const tankLabels = { mainTank: g.mainTank, high: g.high, mid: g.mid, low: g.low }
+  const switchLabels = { open: g.open, closed: g.closed, noData: g.noData.toLowerCase() }
+  const levelLabels = { noData: g.noData, noActiveLevel: g.noActiveLevel, high: g.high, mid: g.mid, low: g.low }
   const telemetry = dashboard.latestTelemetry
-  const config = getTankConfig(dashboard.metadata)
+  const config = getTankConfig(dashboard.metadata, tankLabels)
   const visibleTankSensors = config.sensors.filter((sensor) => hasSwitchReading(telemetry, sensor.key))
   const fillPercent = getTankFillPercent(telemetry, dashboard.metadata)
   const sensorRaw: Record<string, string> = {
-    high: floatSwitchValue(getSwitchState(telemetry, 'high'), getSwitchRaw(telemetry, 'high')),
-    mid: floatSwitchValue(getSwitchState(telemetry, 'mid'), getSwitchRaw(telemetry, 'mid')),
-    low: floatSwitchValue(getSwitchState(telemetry, 'low'), getSwitchRaw(telemetry, 'low')),
+    high: floatSwitchValue(getSwitchState(telemetry, 'high'), getSwitchRaw(telemetry, 'high'), switchLabels.noData),
+    mid: floatSwitchValue(getSwitchState(telemetry, 'mid'), getSwitchRaw(telemetry, 'mid'), switchLabels.noData),
+    low: floatSwitchValue(getSwitchState(telemetry, 'low'), getSwitchRaw(telemetry, 'low'), switchLabels.noData),
   }
   const sensorState: Record<string, string | null> = {
     high: getSwitchState(telemetry, 'high'),
@@ -287,7 +293,7 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
     low: getSwitchActive(telemetry, dashboard.metadata, 'low'),
   }
   const tone = tankLevelTone(telemetry, dashboard.metadata)
-  const levelLabel = tankLevelLabel(telemetry, dashboard.metadata)
+  const levelLabel = tankLevelLabel(telemetry, dashboard.metadata, levelLabels)
 
   return (
     <Card className="overflow-hidden border-slate-200 bg-white/92">
@@ -299,8 +305,8 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
               {config.label}
             </CardTitle>
             <CardDescription>
-              Lectura visual por flotadores
-              {config.capacityLiters ? ` - Capacidad ${config.capacityLiters} L` : ''}
+              {g.floatReading}
+              {config.capacityLiters ? ` - ${g.capacity} ${config.capacityLiters} L` : ''}
             </CardDescription>
           </div>
           <div className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-sm font-bold ${tone.badge}`}>
@@ -336,7 +342,7 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
                 </div>
                 <div className="absolute inset-0 rounded-[1.6rem] bg-[linear-gradient(90deg,rgba(255,255,255,0.26),transparent_18%,transparent_76%,rgba(15,23,42,0.38))]" />
                 <div className="absolute left-5 top-5 rounded-xl border border-white/10 bg-white/90 px-3 py-2 shadow-sm">
-                  <p className="text-[11px] font-semibold uppercase text-slate-500">Nivel</p>
+                  <p className="text-[11px] font-semibold uppercase text-slate-500">{g.level}</p>
                   <p className={`text-2xl font-extrabold ${tone.text}`}>{Math.round(fillPercent)}%</p>
                 </div>
                 {visibleTankSensors.map((sensor) => (
@@ -372,10 +378,10 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
 
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">Estado estimado</p>
+            <p className="text-xs font-semibold uppercase text-slate-500">{g.estimatedState}</p>
             <p className={`mt-2 text-3xl font-extrabold ${tone.text}`}>{levelLabel}</p>
             <p className="mt-2 text-sm text-slate-600">
-              El nivel se calcula con los flotadores activos y sus posiciones configuradas.
+              {g.levelCalcNote}
             </p>
           </div>
 
@@ -385,21 +391,21 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase">{sensor.label}</p>
-                    <p className="mt-1 text-lg font-bold">{translateSwitchState(sensorState[sensor.key])}</p>
+                    <p className="mt-1 text-lg font-bold">{translateSwitchState(sensorState[sensor.key], switchLabels)}</p>
                   </div>
                   <span className="rounded-full bg-white/70 px-2.5 py-1 text-xs font-bold">
                     {sensor.position}%
                   </span>
                 </div>
-                <p className="mt-2 text-xs">Lectura: {sensorRaw[sensor.key]}</p>
+                <p className="mt-2 text-xs">{g.reading} {sensorRaw[sensor.key]}</p>
               </div>
             ))}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-            <p className="font-semibold text-slate-900">Configuracion del tanque</p>
+            <p className="font-semibold text-slate-900">{g.tankConfig}</p>
             <p className="mt-1">
-              Sensores reportados: {visibleTankSensors.length > 0 ? visibleTankSensors.map((sensor) => `${sensor.label} ${sensor.position}%`).join(', ') : 'sin lecturas'}.
+              {g.reportedSensors} {visibleTankSensors.length > 0 ? visibleTankSensors.map((sensor) => `${sensor.label} ${sensor.position}%`).join(', ') : g.noReadings}.
             </p>
           </div>
         </div>
@@ -408,12 +414,12 @@ function TankVisual({ dashboard }: { dashboard: ProjectGreenhouseDashboard }) {
   )
 }
 
-function sensorReadingValue(reading: ProjectGreenhouseDashboard['sensorReadings'][number]) {
+function sensorReadingValue(reading: ProjectGreenhouseDashboard['sensorReadings'][number], yesLabel = 'Si', noLabel = 'No', noDataLabel = 'Sin dato') {
   if (reading.value_number !== null) {
     return `${reading.value_number}${reading.unit ? ` ${reading.unit}` : ''}`
   }
-  if (reading.value_boolean !== null) return reading.value_boolean ? 'Si' : 'No'
-  return reading.value_text || 'Sin dato'
+  if (reading.value_boolean !== null) return reading.value_boolean ? yesLabel : noLabel
+  return reading.value_text || noDataLabel
 }
 
 function sensorMetricBool(
@@ -522,13 +528,13 @@ function latestSensorGroups(readings: ProjectGreenhouseDashboard['sensorReadings
   return Array.from(groups.values()).filter(sensorIsConnected)
 }
 
-function sensorGroupTitle(kind: string) {
+function sensorGroupTitle(kind: string, labels = { soilMoisture: 'Humedad del suelo', ambientTempHum: 'Temperatura y humedad ambiente', tankFloats: 'Flotadores del tanque', controller: 'Controlador', otherSensors: 'Otros sensores' }) {
   const normalized = kind.toLowerCase()
-  if (normalized.includes('soil')) return 'Humedad del suelo'
-  if (normalized.includes('environment') || normalized.includes('dht')) return 'Temperatura y humedad ambiente'
-  if (normalized.includes('float')) return 'Flotadores del tanque'
-  if (normalized.includes('controller')) return 'Controlador'
-  return 'Otros sensores'
+  if (normalized.includes('soil')) return labels.soilMoisture
+  if (normalized.includes('environment') || normalized.includes('dht')) return labels.ambientTempHum
+  if (normalized.includes('float')) return labels.tankFloats
+  if (normalized.includes('controller')) return labels.controller
+  return labels.otherSensors
 }
 
 function sensorGroupIcon(kind: string) {
@@ -539,10 +545,10 @@ function sensorGroupIcon(kind: string) {
   return <Activity className="h-5 w-5 text-primary-700" />
 }
 
-function groupedSensorCards(readings: ProjectGreenhouseDashboard['sensorReadings']) {
+function groupedSensorCards(readings: ProjectGreenhouseDashboard['sensorReadings'], sensorGroupLabels: { soilMoisture: string; ambientTempHum: string; tankFloats: string; controller: string; otherSensors: string }) {
   const groups = latestSensorGroups(readings)
   return groups.reduce<Record<string, ReturnType<typeof latestSensorGroups>>>((acc, sensor) => {
-    const title = sensorGroupTitle(sensor.kind)
+    const title = sensorGroupTitle(sensor.kind, sensorGroupLabels)
     acc[title] = acc[title] || []
     acc[title].push(sensor)
     return acc
@@ -561,6 +567,13 @@ function latestNumericReading(
 }
 
 export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
+  const { t } = useLanguage()
+  const g = t.greenhouse
+  const sensorGroupLabels = { soilMoisture: g.soilMoisture, ambientTempHum: g.ambientTempHum, tankFloats: g.tankFloats, controller: g.controller, otherSensors: g.otherSensors }
+  const noDataLabel = g.noData
+  const switchLabels = { open: g.open, closed: g.closed, noData: g.noData.toLowerCase() }
+  const levelLabels = { noData: g.noData, noActiveLevel: g.noActiveLevel, high: g.high, mid: g.mid, low: g.low }
+  const tankLabels = { mainTank: g.mainTank, high: g.high, mid: g.mid, low: g.low }
   const [dashboard, setDashboard] = useState<ProjectGreenhouseDashboard | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -577,7 +590,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
       const data = await greenhouseService.getProjectDashboard(projectId)
       setDashboard(data)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo cargar el dashboard del invernadero.'
+      const message = err instanceof Error ? err.message : g.loadError
       setError(message)
       setDashboard(null)
     } finally {
@@ -602,9 +615,9 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
       const data = await greenhouseService.connectProject(projectId, pairingCode)
       setDashboard(data)
       setPairingCode('')
-      showSuccess('Invernadero enlazado al proyecto')
+      showSuccess(g.linked)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo enlazar el invernadero.'
+      const message = err instanceof Error ? err.message : g.linkError
       setError(message)
       showError(message)
     } finally {
@@ -613,7 +626,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
   }
 
   const handleDisconnect = async () => {
-    if (!window.confirm('Se desconectara el invernadero de este proyecto. Deseas continuar?')) {
+    if (!window.confirm(g.confirmDisconnect)) {
       return
     }
 
@@ -621,9 +634,9 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
       setSaving(true)
       await greenhouseService.disconnectProject(projectId)
       setDashboard(null)
-      showSuccess('Invernadero desconectado')
+      showSuccess(g.disconnected)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo desconectar el invernadero.'
+      const message = err instanceof Error ? err.message : g.disconnectError
       setError(message)
       showError(message)
     } finally {
@@ -645,7 +658,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
   const ambientHumidity = dashboard
     ? latestNumericReading(dashboard.sensorReadings, ['environment', 'dht'], ['hum_pct', 'humidity_pct', 'humidity'])
     : null
-  const sensorCards = dashboard ? groupedSensorCards(dashboard.sensorReadings) : {}
+  const sensorCards = dashboard ? groupedSensorCards(dashboard.sensorReadings, sensorGroupLabels) : {}
 
   return (
     <div className="space-y-6">
@@ -655,57 +668,57 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/90">
                 <Leaf className="h-3.5 w-3.5" />
-                Invernadero inteligente
+                {g.smartGreenhouse}
               </span>
               {dashboard && (
                 <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusTone(dashboard.status)}`}>
-                  {dashboard.status === 'active' ? 'Operativo' : dashboard.status}
+                  {dashboard.status === 'active' ? g.operational : dashboard.status}
                 </span>
               )}
               {dashboard?.isDemo && (
                 <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold">
-                  Modo demo
+                  {g.demoMode}
                 </span>
               )}
             </div>
             <div>
               <CardTitle className="text-2xl text-white">
-                {dashboard ? dashboard.deviceName : 'Conecta un invernadero al proyecto'}
+                {dashboard ? dashboard.deviceName : g.connectTitle}
               </CardTitle>
               <CardDescription className="mt-1 max-w-2xl text-slate-100/85">
                 {dashboard
-                  ? 'Monitorea temperatura, humedad, nivel de tanque y actividad de actuadores desde el panel del proyecto.'
-                  : 'Pega el codigo del invernadero para activar un dashboard tecnico dentro del proyecto.'}
+                  ? g.connectedDesc
+                  : g.notConnectedDesc}
               </CardDescription>
               <a
                 href="#manual-invernadero"
                 className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
               >
                 <BookOpen className="h-4 w-4" />
-                Ver manual del sistema
+                {g.viewManual}
               </a>
             </div>
           </CardHeader>
 
           <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
-              <p className="text-xs uppercase tracking-wide text-white/70">Codigo enlazado</p>
+              <p className="text-xs uppercase tracking-wide text-white/70">{g.linkedCode}</p>
               <p className="mt-2 font-mono text-lg font-bold text-white">
                 {dashboard ? dashboard.greenhouseCode : greenhouseService.getDemoGreenhouseCode()}
               </p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
-              <p className="text-xs uppercase tracking-wide text-white/70">Ultimo reporte</p>
+              <p className="text-xs uppercase tracking-wide text-white/70">{g.lastReport}</p>
               <p className="mt-2 text-sm font-semibold text-white">
-                {dashboard ? formatDateTime(dashboard.lastSeenAt || dashboard.latestTelemetry?.recorded_at || null, dashboard.timezone) : 'Sin enlace'}
+                {dashboard ? formatDateTime(dashboard.lastSeenAt || dashboard.latestTelemetry?.recorded_at || null, dashboard.timezone, g.noData) : g.noLink}
               </p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
-              <p className="text-xs uppercase tracking-wide text-white/70">Ubicacion</p>
-              <p className="mt-2 text-sm font-semibold text-white">{dashboard?.location || 'Pendiente de conexion'}</p>
+              <p className="text-xs uppercase tracking-wide text-white/70">{g.location}</p>
+              <p className="mt-2 text-sm font-semibold text-white">{dashboard?.location || g.pendingConnection}</p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
-              <p className="text-xs uppercase tracking-wide text-white/70">Zona horaria</p>
+              <p className="text-xs uppercase tracking-wide text-white/70">{g.timezone}</p>
               <p className="mt-2 text-sm font-semibold text-white">{dashboard?.timezone || 'UTC'}</p>
             </div>
           </CardContent>
@@ -715,10 +728,10 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-900">
               <Link2 className="h-5 w-5 text-primary-700" />
-              Integracion por codigo
+              {g.integrationTitle}
             </CardTitle>
             <CardDescription>
-              Usa el codigo del invernadero productivo para activar el dashboard. El codigo configurado para este bridge es
+              {g.integrationDesc1}
               {' '}
               <span className="font-mono font-semibold text-primary-800">{greenhouseService.getProductionGreenhouseCode()}</span>.
             </CardDescription>
@@ -732,7 +745,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
             )}
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Codigo del invernadero</label>
+              <label className="text-sm font-semibold text-slate-700">{g.codeLabel}</label>
               <Input
                 value={pairingCode}
                 onChange={(event) => setPairingCode(event.target.value.toUpperCase())}
@@ -745,27 +758,27 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
             <div className="flex flex-wrap gap-2">
               <Button onClick={handleConnect} disabled={!canManageIntegration || !pairingCode.trim() || saving} loading={saving}>
                 <Link2 className="mr-2 h-4 w-4" />
-                Enlazar invernadero
+                {g.linkBtn}
               </Button>
 
               {dashboard && canManageIntegration && (
                 <Button variant="outline" onClick={handleDisconnect} disabled={saving}>
                   <Unplug className="mr-2 h-4 w-4" />
-                  Desconectar
+                  {g.disconnectBtn}
                 </Button>
               )}
 
               {dashboard && (
                 <Button variant="ghost" onClick={loadDashboard} disabled={saving}>
                   <RefreshCcw className="mr-2 h-4 w-4" />
-                  Actualizar
+                  {g.refreshBtn}
                 </Button>
               )}
             </div>
 
             {!canManageIntegration && (
               <p className="text-sm text-slate-500">
-                Tu rol actual es solo lectura. Pide a un usuario con permisos de edicion que conecte el invernadero.
+                {g.readOnlyNote}
               </p>
             )}
           </CardContent>
@@ -781,13 +794,13 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base text-slate-900">
                   <Thermometer className="h-4 w-4 text-rose-500" />
-                  Temperatura
+                  {g.temperature}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-slate-900">{metricValue(ambientTemp ?? dashboard.latestTelemetry?.temp_c ?? null, ' C')}</div>
+                <div className="text-3xl font-bold text-slate-900">{metricValue(ambientTemp ?? dashboard.latestTelemetry?.temp_c ?? null, ' C', g.noData)}</div>
                 <p className="mt-2 text-sm text-slate-500">
-                  Fuente: DHT ambiente
+                  {g.dhtSource}
                 </p>
               </CardContent>
             </Card>
@@ -796,12 +809,12 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base text-slate-900">
                   <Droplets className="h-4 w-4 text-sky-600" />
-                  Humedad
+                  {g.humidity}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-slate-900">{metricValue(ambientHumidity ?? dashboard.latestTelemetry?.hum_pct ?? null, ' %')}</div>
-                <p className="mt-2 text-sm text-slate-500">Fuente: DHT ambiente</p>
+                <div className="text-3xl font-bold text-slate-900">{metricValue(ambientHumidity ?? dashboard.latestTelemetry?.hum_pct ?? null, ' %', g.noData)}</div>
+                <p className="mt-2 text-sm text-slate-500">{g.dhtSource}</p>
               </CardContent>
             </Card>
 
@@ -809,19 +822,19 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base text-slate-900">
                   <Waves className="h-4 w-4 text-emerald-600" />
-                  Tanque
+                  {g.tank}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-slate-900">
-                  {tankLevelLabel(dashboard.latestTelemetry, dashboard.metadata)}
+                  {tankLevelLabel(dashboard.latestTelemetry, dashboard.metadata, levelLabels)}
                 </div>
                 <p className="mt-2 text-sm text-slate-500">
-                  Bajo: {floatSwitchValue(getSwitchState(dashboard.latestTelemetry, 'low'), getSwitchRaw(dashboard.latestTelemetry, 'low'))}
+                  {g.lowLabel} {floatSwitchValue(getSwitchState(dashboard.latestTelemetry, 'low'), getSwitchRaw(dashboard.latestTelemetry, 'low'), g.noData)}
                   {' - '}
-                  Medio: {floatSwitchValue(getSwitchState(dashboard.latestTelemetry, 'mid'), getSwitchRaw(dashboard.latestTelemetry, 'mid'))}
+                  {g.midLabel} {floatSwitchValue(getSwitchState(dashboard.latestTelemetry, 'mid'), getSwitchRaw(dashboard.latestTelemetry, 'mid'), g.noData)}
                   {' - '}
-                  Alto: {floatSwitchValue(getSwitchState(dashboard.latestTelemetry, 'high'), getSwitchRaw(dashboard.latestTelemetry, 'high'))}
+                  {g.highLabel} {floatSwitchValue(getSwitchState(dashboard.latestTelemetry, 'high'), getSwitchRaw(dashboard.latestTelemetry, 'high'), g.noData)}
                 </p>
               </CardContent>
             </Card>
@@ -830,30 +843,30 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base text-slate-900">
                   <Power className="h-4 w-4 text-amber-500" />
-                  Actuadores
+                  {g.actuators}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
                   <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
                     <Sun className="h-4 w-4 text-amber-500" />
-                    Luz
+                    {g.light}
                   </span>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${dashboard.latestTelemetry?.light_on ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-700'}`}>
-                    {dashboard.latestTelemetry?.light_on ? 'Encendida' : 'Apagada'}
+                    {dashboard.latestTelemetry?.light_on ? g.lightOn : g.lightOff}
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
                   <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
                     <Activity className="h-4 w-4 text-emerald-600" />
-                    Bomba
+                    {g.pump}
                   </span>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${dashboard.latestTelemetry?.pump_on ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>
-                    {dashboard.latestTelemetry?.pump_on ? 'Activa' : 'Detenida'}
+                    {dashboard.latestTelemetry?.pump_on ? g.pumpActive : g.pumpStopped}
                   </span>
                 </div>
                 <p className="text-sm text-slate-500">
-                  Tiempo restante: {formatDurationMs(dashboard.latestTelemetry?.pump_remaining_ms ?? null)}
+                  {g.remainingTime} {formatDurationMs(dashboard.latestTelemetry?.pump_remaining_ms ?? null)}
                 </p>
               </CardContent>
             </Card>
@@ -866,9 +879,9 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-slate-900">
                   <Activity className="h-5 w-5 text-primary-700" />
-                  Sensores conectados
+                  {g.connectedSensors}
                 </CardTitle>
-                <CardDescription>Lecturas separadas por ambiente, suelo, tanque y controlador.</CardDescription>
+                <CardDescription>{g.sensorsDesc}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
                 {Object.entries(sensorCards).map(([title, sensors]) => (
@@ -908,9 +921,9 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-slate-900">
                   <Clock3 className="h-5 w-5 text-primary-700" />
-                  Lecturas recientes
+                  {g.recentReadings}
                 </CardTitle>
-                <CardDescription>Actualizacion automatica cada 3 minutos mientras esta abierto el tab.</CardDescription>
+                <CardDescription>{g.autoRefreshNote}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {dashboard.telemetryHistory.map((item, index) => (
@@ -922,13 +935,13 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
-                          Temp {metricValue(item.temp_c, ' C')}
+                          {g.tempAbbr} {metricValue(item.temp_c, ' C', g.noData)}
                         </span>
                         <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
-                          Hum {metricValue(item.hum_pct, ' %')}
+                          {g.humAbbr} {metricValue(item.hum_pct, ' %', g.noData)}
                         </span>
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.tank_low ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                          Tanque {tankLevelLabel(item, dashboard.metadata).toLowerCase()}
+                          {g.tank} {tankLevelLabel(item, dashboard.metadata, levelLabels).toLowerCase()}
                         </span>
                       </div>
                     </div>
@@ -940,13 +953,13 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
             <div className="space-y-4">
               <Card className="bg-white/88">
                 <CardHeader>
-                  <CardTitle className="text-slate-900">Actividad reciente</CardTitle>
-                  <CardDescription>Comandos y respuesta del gateway.</CardDescription>
+                  <CardTitle className="text-slate-900">{g.recentActivity}</CardTitle>
+                  <CardDescription>{g.commandsDesc}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {dashboard.recentCommands.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                      No hay comandos registrados todavia.
+                      {g.noCommands}
                     </div>
                   ) : (
                     dashboard.recentCommands.map((command) => (
@@ -961,7 +974,7 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                           </span>
                         </div>
                         {command.reason && <p className="mt-2 text-sm text-slate-600">{command.reason}</p>}
-                        <p className="mt-2 text-xs text-slate-500">Creado {formatDateTime(command.created_at, dashboard.timezone)}</p>
+                        <p className="mt-2 text-xs text-slate-500">{g.createdAt} {formatDateTime(command.created_at, dashboard.timezone)}</p>
                       </div>
                     ))
                   )}
@@ -976,24 +989,24 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
                     ) : (
                       <Leaf className="h-5 w-5 text-emerald-600" />
                     )}
-                    Estado operativo
+                    {g.operationalState}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm text-slate-600">
                   <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                    <span>Streaming activo</span>
+                    <span>{g.activeStreaming}</span>
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${dashboard.latestTelemetry?.stream ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>
-                      {dashboard.latestTelemetry?.stream ? 'Si' : 'No'}
+                      {dashboard.latestTelemetry?.stream ? t.common.yes : t.common.no}
                     </span>
                   </div>
                   <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                    <span>Uptime estimado</span>
+                    <span>{g.estimatedUptime}</span>
                     <span className="text-xs font-semibold text-slate-800">
                       {formatDurationMs(dashboard.latestTelemetry?.device_uptime_ms ?? null)}
                     </span>
                   </div>
                   <p>
-                    Conexion enlazada el {formatDateTime(dashboard.connectedAt, dashboard.timezone)}. Este panel usa los campos definidos en la telemetria del invernadero.
+                    {g.connectionLinked} {formatDateTime(dashboard.connectedAt, dashboard.timezone)}. {g.panelNote}
                   </p>
                 </CardContent>
               </Card>
@@ -1005,9 +1018,9 @@ export function GreenhouseTab({ projectId, userRole }: GreenhouseTabProps) {
           <CardContent className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
             <Leaf className="h-12 w-12 text-emerald-500" />
             <div>
-              <p className="text-lg font-semibold text-slate-900">Aun no hay un invernadero conectado</p>
+              <p className="text-lg font-semibold text-slate-900">{g.notConnectedTitle}</p>
               <p className="mt-1 text-sm text-slate-600">
-                Enlaza un codigo para habilitar el dashboard tecnico del proyecto.
+                {g.notConnectedHint}
               </p>
             </div>
           </CardContent>

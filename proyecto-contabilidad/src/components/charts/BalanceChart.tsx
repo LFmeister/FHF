@@ -2,6 +2,7 @@
 
 import { TrendingUp, Calendar } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface Balance {
   created_at: string
@@ -22,17 +23,19 @@ interface BalanceChartProps {
 }
 
 export function BalanceChart({ balances, expenses }: BalanceChartProps) {
+  const { t } = useLanguage()
+
   // Create timeline data
   const allTransactions = [
-    ...balances.map(b => ({ 
-      date: new Date(b.created_at), 
-      amount: b.amount, 
+    ...balances.map(b => ({
+      date: new Date(b.created_at),
+      amount: b.amount,
       type: 'balance',
-      description: b.description || 'Balance agregado'
+      description: b.description || t.charts.balanceAdded
     })),
-    ...expenses.map(e => ({ 
-      date: new Date(e.created_at), 
-      amount: -e.amount, 
+    ...expenses.map(e => ({
+      date: new Date(e.created_at),
+      amount: -e.amount,
       type: 'expense',
       description: e.description
     }))
@@ -76,14 +79,14 @@ export function BalanceChart({ balances, expenses }: BalanceChartProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5" />
-          Evolución del Balance
+          {t.charts.balanceEvolution}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {timelineData.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No hay transacciones registradas</p>
+            <p>{t.charts.noTransactions}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -103,7 +106,7 @@ export function BalanceChart({ balances, expenses }: BalanceChartProps) {
                         <stop offset="100%" stopColor="#f87171" />
                       </linearGradient>
                     </defs>
-                    
+
                     {/* Background circle */}
                     <circle
                       cx="100"
@@ -113,7 +116,7 @@ export function BalanceChart({ balances, expenses }: BalanceChartProps) {
                       stroke="#e5e7eb"
                       strokeWidth="20"
                     />
-                    
+
                     {totalBalances > 0 && (
                       <>
                         {/* Balance arc */}
@@ -128,7 +131,7 @@ export function BalanceChart({ balances, expenses }: BalanceChartProps) {
                           strokeDasharray={`${(totalBalances / (totalBalances + totalExpenses)) * 502.65} 502.65`}
                           className="transition-all duration-1000 ease-out"
                         />
-                        
+
                         {/* Expense arc */}
                         {totalExpenses > 0 && (
                           <circle
@@ -147,11 +150,11 @@ export function BalanceChart({ balances, expenses }: BalanceChartProps) {
                       </>
                     )}
                   </svg>
-                  
+
                   {/* Center content */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <div className="text-center">
-                      <div className="text-xs text-gray-500 mb-1">Balance Final</div>
+                      <div className="text-xs text-gray-500 mb-1">{t.charts.balanceFinal}</div>
                       <div className={`text-xl font-bold ${
                         currentBalance >= 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
@@ -161,21 +164,21 @@ export function BalanceChart({ balances, expenses }: BalanceChartProps) {
                   </div>
                 </div>
               </div>
-              
+
               {/* Legend */}
               <div className="absolute bottom-4 left-4 right-4">
                 <div className="flex justify-center space-x-6">
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-500 to-green-400"></div>
                     <div className="text-sm">
-                      <span className="text-gray-600">Ingresos: </span>
+                      <span className="text-gray-600">{t.charts.incomeLabel}</span>
                       <span className="font-medium text-green-600">{formatCurrency(totalBalances)}</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 rounded-full bg-gradient-to-r from-red-500 to-red-400"></div>
                     <div className="text-sm">
-                      <span className="text-gray-600">Gastos: </span>
+                      <span className="text-gray-600">{t.charts.expenseLabel}</span>
                       <span className="font-medium text-red-600">{formatCurrency(totalExpenses)}</span>
                     </div>
                   </div>
@@ -185,7 +188,7 @@ export function BalanceChart({ balances, expenses }: BalanceChartProps) {
 
             {/* Recent transactions */}
             <div className="space-y-2">
-              <h4 className="font-medium text-gray-700">Transacciones Recientes</h4>
+              <h4 className="font-medium text-gray-700">{t.charts.recentTransactions}</h4>
               {timelineData.slice(-5).reverse().map((data, index) => (
                 <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
                   <div className="flex items-center space-x-2">
@@ -204,7 +207,7 @@ export function BalanceChart({ balances, expenses }: BalanceChartProps) {
                       {data.amount >= 0 ? '+' : ''}{formatCurrency(data.amount)}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Balance: {formatCurrency(data.runningBalance)}
+                      {t.charts.balance}{formatCurrency(data.runningBalance)}
                     </p>
                   </div>
                 </div>

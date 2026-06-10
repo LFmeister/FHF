@@ -2,6 +2,7 @@
 
 import { PieChart, BarChart3, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface Income {
   amount: number
@@ -14,9 +15,11 @@ interface IncomeChartProps {
 }
 
 export function IncomeChart({ income, totalIncome }: IncomeChartProps) {
+  const { t } = useLanguage()
+
   // Calculate income by category
   const incomeByCategory = income.reduce((acc, incomeItem) => {
-    const category = incomeItem.category || 'Sin categoría'
+    const category = incomeItem.category || t.charts.noCategory
     acc[category] = (acc[category] || 0) + incomeItem.amount
     return acc
   }, {} as Record<string, number>)
@@ -40,7 +43,7 @@ export function IncomeChart({ income, totalIncome }: IncomeChartProps) {
 
   const colors = [
     'bg-green-500',
-    'bg-emerald-500', 
+    'bg-emerald-500',
     'bg-teal-500',
     'bg-cyan-500',
     'bg-blue-500'
@@ -51,14 +54,14 @@ export function IncomeChart({ income, totalIncome }: IncomeChartProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-green-600" />
-          Ingresos por Categoría
+          {t.charts.incomeByCategory}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {categories.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No hay ingresos registrados</p>
+            <p>{t.charts.noIncome}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -81,11 +84,11 @@ export function IncomeChart({ income, totalIncome }: IncomeChartProps) {
                 </div>
               ))}
             </div>
-            
+
             {/* Summary */}
             <div className="pt-4 border-t">
               <div className="flex justify-between items-center font-semibold">
-                <span>Total</span>
+                <span>{t.charts.total}</span>
                 <span className="text-green-600">{formatCurrency(totalIncome)}</span>
               </div>
             </div>

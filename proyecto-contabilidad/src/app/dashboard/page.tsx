@@ -9,6 +9,7 @@ import { ProjectCard } from '@/components/projects/ProjectCard'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { projectsService } from '@/lib/projects'
 import { auth } from '@/lib/auth'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<any[]>([])
@@ -17,6 +18,8 @@ export default function DashboardPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showJoinForm, setShowJoinForm] = useState(false)
   const [search, setSearch] = useState('')
+  const { t } = useLanguage()
+  const td = t.dashboard
 
   useEffect(() => {
     const loadData = async () => {
@@ -78,6 +81,8 @@ export default function DashboardPage() {
     })
   }, [projects, search])
 
+  const userName = user?.user_metadata?.full_name || user?.email || 'Usuario'
+
   if (loading) {
     return (
       <div className="flex min-h-[420px] items-center justify-center">
@@ -97,11 +102,13 @@ export default function DashboardPage() {
             <div>
               <p className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white/90">
                 <Sparkles className="h-3.5 w-3.5" />
-                Espacio de control
+                {td.controlSpace}
               </p>
-              <h1 className="text-2xl font-bold sm:text-3xl">Hola {user?.user_metadata?.full_name || user?.email || 'Usuario'}</h1>
+              <h1 className="text-2xl font-bold sm:text-3xl">
+                {td.greeting.replace('{name}', userName)}
+              </h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-100/90 sm:text-base">
-                Organiza tus proyectos, coordina equipo y mantiene el control financiero con una vista clara.
+                {td.tagline}
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -112,7 +119,7 @@ export default function DashboardPage() {
                   className="bg-white text-primary-900 hover:bg-slate-100"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  {showCreateForm ? 'Cerrar formulario' : 'Crear proyecto'}
+                  {showCreateForm ? td.closeForm : td.createProject}
                 </Button>
                 <Button
                   onClick={() => setShowJoinForm((prev) => !prev)}
@@ -123,26 +130,26 @@ export default function DashboardPage() {
                   }`}
                 >
                   <UserPlus2 className="mr-2 h-4 w-4" />
-                  {showJoinForm ? 'Cerrar formulario' : 'Unirse por codigo'}
+                  {showJoinForm ? td.closeForm : td.joinByCode}
                 </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-                <p className="text-xs uppercase tracking-wide text-white/70">Total proyectos</p>
+                <p className="text-xs uppercase tracking-wide text-white/70">{td.totalProjects}</p>
                 <p className="mt-2 text-2xl font-extrabold">{projects.length}</p>
               </div>
               <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-                <p className="text-xs uppercase tracking-wide text-white/70">Propios</p>
+                <p className="text-xs uppercase tracking-wide text-white/70">{td.owned}</p>
                 <p className="mt-2 text-2xl font-extrabold">{ownedProjects}</p>
               </div>
               <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-                <p className="text-xs uppercase tracking-wide text-white/70">Este mes</p>
+                <p className="text-xs uppercase tracking-wide text-white/70">{td.thisMonth}</p>
                 <p className="mt-2 text-2xl font-extrabold">{thisMonthProjects}</p>
               </div>
               <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-                <p className="text-xs uppercase tracking-wide text-white/70">Colaborativos</p>
+                <p className="text-xs uppercase tracking-wide text-white/70">{td.collaborative}</p>
                 <p className="mt-2 text-2xl font-extrabold">{Math.max(projects.length - ownedProjects, 0)}</p>
               </div>
             </div>
@@ -157,12 +164,14 @@ export default function DashboardPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Mis proyectos</h2>
-              <p className="mt-1 text-sm text-slate-600">Gestiona tus espacios activos y entra rapido a cada panel.</p>
+              <h2 className="text-2xl font-bold text-slate-900">{td.myProjects}</h2>
+              <p className="mt-1 text-sm text-slate-600">{td.manageSpaces}</p>
             </div>
 
             <div className="w-full md:w-80">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Buscar proyecto</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                {td.searchProject}
+              </label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
@@ -170,7 +179,7 @@ export default function DashboardPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-800 outline-none transition focus:border-primary-400 focus:bg-white focus:ring-2 focus:ring-primary-100"
-                  placeholder="Nombre, descripcion o codigo"
+                  placeholder={td.searchPlaceholder}
                 />
               </div>
             </div>
@@ -181,23 +190,23 @@ export default function DashboardPage() {
               <FolderOpen className="mx-auto mb-3 h-12 w-12 text-slate-400" />
               {projects.length === 0 ? (
                 <>
-                  <p className="text-base font-semibold text-slate-800">Aun no tienes proyectos</p>
-                  <p className="mt-1 text-sm text-slate-600">Crea uno nuevo o unete con un codigo de invitacion.</p>
+                  <p className="text-base font-semibold text-slate-800">{td.noProjects}</p>
+                  <p className="mt-1 text-sm text-slate-600">{td.noProjectsHint}</p>
                   <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                     <Button onClick={() => setShowCreateForm(true)}>
                       <Plus className="mr-2 h-4 w-4" />
-                      Crear proyecto
+                      {td.createProject}
                     </Button>
                     <Button onClick={() => setShowJoinForm(true)} variant="outline">
                       <Users className="mr-2 h-4 w-4" />
-                      Unirme a proyecto
+                      {td.joinProject}
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
-                  <p className="text-base font-semibold text-slate-800">No hay coincidencias</p>
-                  <p className="mt-1 text-sm text-slate-600">Prueba otro termino de busqueda.</p>
+                  <p className="text-base font-semibold text-slate-800">{td.noResults}</p>
+                  <p className="mt-1 text-sm text-slate-600">{td.noResultsHint}</p>
                 </>
               )}
             </div>
@@ -211,7 +220,7 @@ export default function DashboardPage() {
 
           <div className="mt-5 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-800">
             <ShieldCheck className="h-4 w-4" />
-            Tus permisos dentro de cada proyecto dependen del rol asignado por el propietario.
+            {td.permissionsNote}
           </div>
         </section>
       </div>

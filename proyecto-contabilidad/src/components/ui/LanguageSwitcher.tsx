@@ -3,10 +3,10 @@
 import { useLanguage } from '@/context/LanguageContext'
 import type { Lang } from '@/lib/i18n'
 
-const LANGS: { code: Lang; label: string; native: string }[] = [
-  { code: 'es', label: 'ES', native: 'Español' },
-  { code: 'en', label: 'EN', native: 'English' },
-  { code: 'id', label: 'ID', native: 'Indonesia' },
+const LANGS: { code: Lang; label: string; native: string; flag: string }[] = [
+  { code: 'es', label: 'ES', native: 'Español',   flag: 'https://flagcdn.com/w40/es.png' },
+  { code: 'en', label: 'EN', native: 'English',   flag: 'https://flagcdn.com/w40/gb.png' },
+  { code: 'id', label: 'ID', native: 'Indonesia', flag: 'https://flagcdn.com/w40/id.png' },
 ]
 
 export function LanguageSwitcher({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
@@ -20,7 +20,7 @@ export function LanguageSwitcher({ variant = 'light' }: { variant?: 'light' | 'd
           : 'border-slate-200 bg-slate-50'
       }`}
     >
-      {LANGS.map(({ code, label, native }) => {
+      {LANGS.map(({ code, label, native, flag }) => {
         const isActive = lang === code
         return (
           <button
@@ -29,7 +29,7 @@ export function LanguageSwitcher({ variant = 'light' }: { variant?: 'light' | 'd
             onClick={() => setLang(code)}
             title={native}
             aria-pressed={isActive}
-            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold transition-all ${
               isActive
                 ? variant === 'dark'
                   ? 'bg-white text-slate-900 shadow-sm'
@@ -39,7 +39,15 @@ export function LanguageSwitcher({ variant = 'light' }: { variant?: 'light' | 'd
                 : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
             }`}
           >
-            {label}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={flag}
+              alt={label}
+              width={20}
+              height={14}
+              className="rounded-[2px] object-cover"
+            />
+            <span>{label}</span>
           </button>
         )
       })}

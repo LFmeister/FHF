@@ -19,7 +19,7 @@ export function AuthShell({ title, subtitle, children, backHref, backLabel }: Au
   return (
     <div className="auth-shell">
       <div className="auth-grid">
-        <aside className="auth-panel">
+        <aside className="auth-panel hidden lg:flex lg:flex-col">
           <div className="mb-8">
             <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
               <span className="text-lg font-extrabold tracking-wide">MM</span>
@@ -43,33 +43,34 @@ export function AuthShell({ title, subtitle, children, backHref, backLabel }: Au
             </div>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-auto pt-8">
             <LanguageSwitcher variant="dark" />
           </div>
         </aside>
 
         <section className="auth-card-wrap flex items-center">
           <div className="w-full rounded-[1.1rem] bg-white p-5 sm:p-7">
-            <div className="mb-5">
-              <div className="flex items-center justify-between">
+            {/* Top bar: back link + language switcher always visible */}
+            <div className="mb-5 flex items-center justify-between">
+              <div>
                 {backHref && backLabel ? (
                   <Link
                     href={backHref}
-                    className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-700"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-700"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     {backLabel}
                   </Link>
                 ) : (
-                  <div />
+                  <span className="text-xs font-bold text-slate-400">MM</span>
                 )}
-                <div className="mb-3 sm:hidden">
-                  <LanguageSwitcher variant="light" />
-                </div>
               </div>
-              <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
-              <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
+              <LanguageSwitcher variant="light" />
             </div>
+
+            <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
+            <p className="mt-1 mb-5 text-sm text-slate-600">{subtitle}</p>
+
             {children}
           </div>
         </section>

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { auth } from '@/lib/auth'
 import { registerSchema, type RegisterFormData } from '@/lib/validations'
+import { useLanguage } from '@/context/LanguageContext'
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false)
@@ -19,6 +20,8 @@ export function RegisterForm() {
   const [success, setSuccess] = useState(false)
   const [countdown, setCountdown] = useState(10)
   const router = useRouter()
+  const { t } = useLanguage()
+  const tr = t.auth.register
 
   const {
     register,
@@ -39,13 +42,13 @@ export function RegisterForm() {
         let errorMessage = authError.message
 
         if (errorMessage.includes('User already registered') || errorMessage.includes('already registered')) {
-          errorMessage = 'Este correo ya esta registrado. Prueba iniciar sesion.'
+          errorMessage = tr.errorAlreadyRegistered
         } else if (errorMessage.includes('Password should be at least')) {
-          errorMessage = 'La contrasena debe tener al menos 6 caracteres.'
+          errorMessage = tr.errorWeakPassword
         } else if (errorMessage.includes('Invalid email')) {
-          errorMessage = 'El formato del correo no es valido.'
+          errorMessage = tr.errorInvalidEmail
         } else if (errorMessage.includes('Email rate limit exceeded')) {
-          errorMessage = 'Demasiados intentos. Espera unos minutos.'
+          errorMessage = tr.errorRateLimit
         }
 
         setError(errorMessage)
@@ -65,7 +68,7 @@ export function RegisterForm() {
         }
       }, 1000)
     } catch (err) {
-      setError('Error inesperado. Intenta de nuevo.')
+      setError(tr.errorUnexpected)
     } finally {
       setIsLoading(false)
     }
@@ -76,16 +79,16 @@ export function RegisterForm() {
       <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5" />
-          <p className="text-base font-semibold">Registro completado</p>
+          <p className="text-base font-semibold">{tr.successTitle}</p>
         </div>
-        <p>
-          Enviamos un correo de confirmacion. Revisa bandeja principal y spam, luego confirma para iniciar sesion.
-        </p>
+        <p>{tr.successMessage}</p>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button onClick={() => router.push('/auth/login')} className="w-full sm:w-auto">
-            Ir al login
+            {tr.successGoLogin}
           </Button>
-          <p className="self-center text-xs text-emerald-800">Redireccion automatica en {countdown}s</p>
+          <p className="self-center text-xs text-emerald-800">
+            {tr.successRedirect.replace('{n}', String(countdown))}
+          </p>
         </div>
       </div>
     )
@@ -101,27 +104,41 @@ export function RegisterForm() {
 
       <div className="space-y-1.5">
         <label htmlFor="fullName" className="text-sm font-semibold text-slate-700">
-          Nombre completo
+          {tr.fullName}
         </label>
         <div className="relative">
           <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input id="fullName" type="text" placeholder="Tu nombre y apellido" className="pl-10" {...register('fullName')} error={errors.fullName?.message} />
+          <Input
+            id="fullName"
+            type="text"
+            placeholder={tr.fullNamePlaceholder}
+            className="pl-10"
+            {...register('fullName')}
+            error={errors.fullName?.message}
+          />
         </div>
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="email" className="text-sm font-semibold text-slate-700">
-          Email
+          {tr.email}
         </label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input id="email" type="email" placeholder="tu@email.com" className="pl-10" {...register('email')} error={errors.email?.message} />
+          <Input
+            id="email"
+            type="email"
+            placeholder="tu@email.com"
+            className="pl-10"
+            {...register('email')}
+            error={errors.email?.message}
+          />
         </div>
       </div>
 
       <div className="space-y-1.5">
         <label htmlFor="password" className="text-sm font-semibold text-slate-700">
-          Contrasena
+          {tr.password}
         </label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -145,7 +162,7 @@ export function RegisterForm() {
 
       <div className="space-y-1.5">
         <label htmlFor="confirmPassword" className="text-sm font-semibold text-slate-700">
-          Confirmar contrasena
+          {tr.confirmPassword}
         </label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -168,13 +185,13 @@ export function RegisterForm() {
       </div>
 
       <Button type="submit" className="w-full" size="lg" loading={isLoading} disabled={isLoading}>
-        {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
+        {isLoading ? tr.submitting : tr.submit}
       </Button>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-sm text-slate-600">
-        Ya tienes una cuenta?{' '}
+        {tr.hasAccount}{' '}
         <Link href="/auth/login" className="font-semibold text-primary-700 hover:text-primary-900">
-          Iniciar sesion
+          {tr.loginLink}
         </Link>
       </div>
     </form>

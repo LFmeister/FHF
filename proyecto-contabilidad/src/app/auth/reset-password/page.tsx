@@ -9,19 +9,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { auth } from '@/lib/auth'
 import { AuthShell } from '@/components/auth/AuthShell'
+import { useLanguage } from '@/context/LanguageContext'
 import { z } from 'zod'
-
-const resetPasswordSchema = z
-  .object({
-    password: z.string().min(6, 'La contrasena debe tener al menos 6 caracteres'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Las contrasenas no coinciden',
-    path: ['confirmPassword'],
-  })
-
-type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
 
 export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -31,6 +20,20 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false)
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null)
   const router = useRouter()
+  const { t } = useLanguage()
+  const tr = t.auth.reset
+
+  const resetPasswordSchema = z
+    .object({
+      password: z.string().min(6, tr.errorPasswordMin),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: tr.errorPasswordMatch,
+      path: ['confirmPassword'],
+    })
+
+  type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
 
   const {
     register,
@@ -66,7 +69,7 @@ export default function ResetPasswordPage() {
       setSuccess(true)
       setTimeout(() => router.push('/dashboard'), 2500)
     } catch (err) {
-      setError('Error inesperado. Intenta nuevamente.')
+      setError(tr.errorUnexpected)
     } finally {
       setIsLoading(false)
     }
@@ -74,15 +77,15 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthShell
-      title="Restablecer contrasena"
-      subtitle="Crea una nueva clave segura para tu cuenta."
+      title={tr.title}
+      subtitle={tr.subtitle}
       backHref="/auth/login"
-      backLabel="volver al login"
+      backLabel={tr.backLabel}
     >
       {isValidSession === null && (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary-300 border-t-primary-700" />
-          <p className="mt-3 text-sm text-slate-600">Verificando sesion...</p>
+          <p className="mt-3 text-sm text-slate-600">{tr.verifying}</p>
         </div>
       )}
 
@@ -90,14 +93,14 @@ export default function ResetPasswordPage() {
         <div className="space-y-4 rounded-2xl border border-red-200 bg-red-50 p-5">
           <div className="flex items-center gap-2 text-red-700">
             <XCircle className="h-5 w-5" />
-            <p className="font-semibold">Enlace invalido o expirado</p>
+            <p className="font-semibold">{tr.invalidLink}</p>
           </div>
-          <p className="text-sm text-red-700">Solicita un nuevo enlace para recuperar el acceso.</p>
+          <p className="text-sm text-red-700">{tr.invalidMessage}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             <Button variant="outline" onClick={() => router.push('/auth/login')}>
-              Ir al login
+              {tr.goLogin}
             </Button>
-            <Button onClick={() => router.push('/auth/forgot-password')}>Solicitar nuevo enlace</Button>
+            <Button onClick={() => router.push('/auth/forgot-password')}>{tr.requestNew}</Button>
           </div>
         </div>
       )}
@@ -106,22 +109,24 @@ export default function ResetPasswordPage() {
         <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
           <div className="flex items-center gap-2 text-emerald-700">
             <CheckCircle className="h-5 w-5" />
-            <p className="font-semibold">Contrasena actualizada</p>
+            <p className="font-semibold">{tr.successTitle}</p>
           </div>
-          <p className="text-sm text-emerald-800">Listo. Te redirigiremos al panel en unos segundos.</p>
+          <p className="text-sm text-emerald-800">{tr.successMessage}</p>
           <Button className="w-full" onClick={() => router.push('/dashboard')}>
-            Ir al dashboard
+            {tr.goToDashboard}
           </Button>
         </div>
       )}
 
       {isValidSession && !success && (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+          )}
 
           <div className="space-y-1.5">
             <label htmlFor="password" className="text-sm font-semibold text-slate-700">
-              Nueva contrasena
+              {tr.newPassword}
             </label>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -145,7 +150,7 @@ export default function ResetPasswordPage() {
 
           <div className="space-y-1.5">
             <label htmlFor="confirmPassword" className="text-sm font-semibold text-slate-700">
-              Confirmar contrasena
+              {tr.confirmPassword}
             </label>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -168,7 +173,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <Button type="submit" className="w-full" size="lg" loading={isLoading}>
-            Actualizar contrasena
+            {tr.submit}
           </Button>
         </form>
       )}

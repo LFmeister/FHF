@@ -10,12 +10,15 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { auth } from '@/lib/auth'
 import { loginSchema, type LoginFormData } from '@/lib/validations'
+import { useLanguage } from '@/context/LanguageContext'
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { t } = useLanguage()
+  const tl = t.auth.login
 
   const {
     register,
@@ -34,7 +37,7 @@ export function LoginForm() {
 
       if (authError) {
         if (authError.message.includes('Email not confirmed') || authError.message.includes('email_not_confirmed')) {
-          setError('Debes confirmar tu correo electronico antes de iniciar sesion.')
+          setError(tl.errorEmailNotConfirmed)
         } else {
           setError(authError.message)
         }
@@ -44,14 +47,14 @@ export function LoginForm() {
       if (authData.user) {
         const isEmailConfirmed = await auth.isEmailConfirmed()
         if (!isEmailConfirmed) {
-          setError('Debes confirmar tu correo electronico antes de acceder.')
+          setError(tl.errorEmailNotConfirmed)
           await auth.signOut()
           return
         }
         router.push('/dashboard')
       }
     } catch (err) {
-      setError('Error inesperado. Intenta nuevamente.')
+      setError(tl.errorUnexpected)
     } finally {
       setIsLoading(false)
     }
@@ -67,7 +70,7 @@ export function LoginForm() {
 
       <div className="space-y-1.5">
         <label htmlFor="email" className="text-sm font-semibold text-slate-700">
-          Email
+          {tl.email}
         </label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -85,7 +88,7 @@ export function LoginForm() {
 
       <div className="space-y-1.5">
         <label htmlFor="password" className="text-sm font-semibold text-slate-700">
-          Contrasena
+          {tl.password}
         </label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -110,18 +113,18 @@ export function LoginForm() {
 
       <div className="flex items-center justify-between pt-1">
         <Link href="/auth/forgot-password" className="text-sm font-medium text-primary-700 hover:text-primary-900">
-          Olvide mi contrasena
+          {tl.forgotPassword}
         </Link>
       </div>
 
       <Button type="submit" className="w-full" size="lg" loading={isLoading}>
-        Iniciar sesion
+        {tl.submit}
       </Button>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-sm text-slate-600">
-        No tienes cuenta?{' '}
+        {tl.noAccount}{' '}
         <Link href="/auth/register" className="font-semibold text-primary-700 hover:text-primary-900">
-          Registrate aqui
+          {tl.register}
         </Link>
       </div>
     </form>

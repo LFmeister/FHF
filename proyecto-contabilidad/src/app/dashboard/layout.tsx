@@ -6,7 +6,9 @@ import { useRouter, usePathname } from 'next/navigation'
 import { LogOut, Settings, Menu, X, LayoutDashboard, FolderKanban } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { AccountSettingsModal } from '@/components/account/AccountSettingsModal'
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 import { auth } from '@/lib/auth'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function DashboardLayout({
   children,
@@ -19,6 +21,8 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+  const { t } = useLanguage()
+  const td = t.dashboard
 
   const isProjectPage = pathname?.includes('/project') || false
   const isDashboardRoot = pathname === '/dashboard'
@@ -93,13 +97,13 @@ export default function DashboardLayout({
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-slate-900 sm:text-base">Meister Manager</p>
-                <p className="hidden text-xs text-slate-500 sm:block">Panel financiero colaborativo</p>
+                <p className="hidden text-xs text-slate-500 sm:block">{td.subtitle}</p>
               </div>
             </div>
 
             <button
               type="button"
-              aria-label="Abrir menu"
+              aria-label={td.openMenu}
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 md:hidden"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
             >
@@ -116,7 +120,7 @@ export default function DashboardLayout({
                 }`}
               >
                 <LayoutDashboard className="h-4 w-4" />
-                Dashboard
+                {td.nav}
               </Link>
               <Link
                 href="/dashboard"
@@ -127,7 +131,7 @@ export default function DashboardLayout({
                 }`}
               >
                 <FolderKanban className="h-4 w-4" />
-                Proyectos
+                {td.projects}
               </Link>
 
               {isProjectPage && (
@@ -141,21 +145,23 @@ export default function DashboardLayout({
                   className="text-primary-700 hover:text-primary-900"
                 >
                   <Settings className="mr-2 h-4 w-4" />
-                  Configuracion
+                  {td.settings}
                 </Button>
               )}
+
+              <LanguageSwitcher variant="light" />
 
               <Button
                 variant="ghost"
                 size="sm"
-                title="Ajustes de cuenta"
+                title={td.accountSettings}
                 onClick={() => setShowAccountSettings(true)}
               >
                 <Settings className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="sm" onClick={handleSignOut}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Cerrar sesion
+                {td.signOut}
               </Button>
             </div>
           </div>
@@ -170,7 +176,7 @@ export default function DashboardLayout({
                   }`}
                 >
                   <LayoutDashboard className="h-4 w-4" />
-                  Dashboard
+                  {td.nav}
                 </Link>
                 <Link
                   href="/dashboard"
@@ -179,15 +185,18 @@ export default function DashboardLayout({
                   }`}
                 >
                   <FolderKanban className="h-4 w-4" />
-                  Proyectos
+                  {td.projects}
                 </Link>
+                <div className="px-3 py-1">
+                  <LanguageSwitcher variant="light" />
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowAccountSettings(true)}
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700"
                 >
                   <Settings className="h-4 w-4" />
-                  Ajustes de cuenta
+                  {td.accountSettings}
                 </button>
                 <button
                   type="button"
@@ -195,7 +204,7 @@ export default function DashboardLayout({
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-rose-700"
                 >
                   <LogOut className="h-4 w-4" />
-                  Cerrar sesion
+                  {td.signOut}
                 </button>
                 {user && (
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
